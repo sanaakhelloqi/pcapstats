@@ -10,7 +10,7 @@ setup(
     include_package_data=True,
     author="Sanaa Khelloqi",
     author_email="sanaa.khelloqi@stud-mail.uni-wuerzburg",
-    url="https://github.com/",
+    url="https://github.com/sanaakhelloqi/pcapstats",
     entry_points={
         'console_scripts': [
             'pcapstats-stats=cli.stats:stats',
