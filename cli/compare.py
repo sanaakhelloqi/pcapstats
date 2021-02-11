@@ -1,10 +1,10 @@
-from concurrent.futures._base import Future
+
 from typing import Any
 
 from src.Pcap import Pcap
 from src.Comparator import Comparator
 import src.utils as utils
-
+import json
 import multiprocessing
 import click
 from scapy.error import Scapy_Exception
@@ -14,7 +14,7 @@ import pandas as pd
 @click.command()
 @click.argument("original", nargs=1)
 @click.argument("targets", nargs=-1)
-@click.option("-o", "--output", type=str, default="result.csv")
+@click.option("-o", "--output", type=str, default="result.json")
 @click.option("-v", "--visualize", is_flag=True)
 @click.option("-vo", "--visualize-output", type=str, default="result.pdf")
 def compare(original, targets, output, visualize, visualize_output):
@@ -48,8 +48,14 @@ def compare(original, targets, output, visualize, visualize_output):
 
     if comparison_df_list:
         click.echo(f"Writing results to {output}")
-        stats_df = pd.concat(comparison_df_list)
-        stats_df.to_csv(output, index=False)
+
+        #stats_df = pd.concat(comparison_df_list)
+        #stats_df.to_csv(output, index=False)
+        #stats_df.to_json(r'{}.json'.format({output}), index=False, orient='table')
+        jsonString = json.dumps(comparison_df_list)
+        jsonFile = open('{}.json'.format({output}), "w")
+        jsonFile.write(jsonString)
+        jsonFile.close()
     else:
         click.echo("No results generated.")
 

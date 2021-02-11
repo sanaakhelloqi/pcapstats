@@ -1,5 +1,5 @@
 from src.Pcap import Pcap
-
+import json
 import click
 from scapy.error import Scapy_Exception
 import pandas as pd
@@ -7,7 +7,7 @@ import pandas as pd
 
 @click.command()
 @click.argument("files", nargs=-1)
-@click.option("-o", "--output", type=str, default="result.csv")
+@click.option("-o", "--output", type=str, default="result.json")
 def stats(files, output):
     stats_df_list = []
 
@@ -22,8 +22,12 @@ def stats(files, output):
                 continue
 
     click.echo(f"Writing results to {output}")
-    stats_df = pd.concat(stats_df_list)
-    stats_df.to_csv(output, index=False)
+    jsonString = json.dumps(stats_df_list)
+    jsonFile = open('{}.json'.format({output}), "w")
+    jsonFile.write(jsonString)
+    jsonFile.close()
+    #stats_df = pd.concat(stats_df_list)
+    #stats_df.to_csv(output, index=False)
 
 
 if __name__ == "__main__":
