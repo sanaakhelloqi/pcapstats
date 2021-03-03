@@ -1,12 +1,12 @@
 import libs.mlvideos as mlvideos
-
+import math
+import pandas as pd
+import numpy as np
+import decimal
 from pathlib import Path
 from decimal import Decimal
 from typing import List
-import math
 from scapy.all import rdpcap, RawPcapReader
-import pandas as pd
-import numpy as np
 from scipy import stats
 
 
@@ -15,286 +15,56 @@ class Pcap:
         self.file = file
         self.stats = {"pcap": str(file)}
         self.deltas = None
+        self.times = self.get_times()
+        self.lengths = self.get_lengths()
+        self.total_length_in_mbit = self.get_total_length_in_mbit()
+        self.packets_count = self.get_packets_count()
+        self.set_of_all_ip_addr = self.get_set_of_all_ip_addr()
+        self.list_of_tuple_src_dst = self.get_list_of_tuple_src_dst()
 
+    def get_list_of_tuple_src_dst(self):
+        list_of_tuple_src_dst = []
+        for pkt in rdpcap(str(self.file)):
+            list_of_tuple_src_dst.append((pkt.src, pkt.dst))
+        return list_of_tuple_src_dst
+
+    # get_times returns a list of arrival time of packets
     def get_times(self) -> List[Decimal]:
-        return [i.time for i in rdpcap(str(self.file))]
+        return [pkt.time for pkt in rdpcap(str(self.file))]
 
-    def get_length(self) -> List[int]:
-        return [len(i) for i in rdpcap(str(self.file))]
+    # get_length returns a list of length of packets
+    def get_lengths(self) -> List[int]:
+        return [len(pkt) for pkt in rdpcap(str(self.file))]
 
-    def get_total_length(self):
-        count = 0
-        for i in rdpcap(str(self.file)):
-            count += len(i)
-        return math.floor((count*8)/1000)
+    # get_total_length returns the total length of packets in mbit
+    def get_total_length_in_mbit(self):
+        total_length = 0
+        for pkt in rdpcap(str(self.file)):
+            total_length += len(pkt)
+        return math.floor((total_length * 8) / 1000000)  # from byte to mbit
 
-    def get_communication_percent(self, partner_ip):
-        counter = 0
-        for i in rdpcap(str(self.file)):
-            if (i.src == partner_ip or i.dst == partner_ip) and (i.src in self.get_list_of_host() or i.dst in self.get_list_of_host()):
-                counter += 1
-        percent = counter / self.get_communication_number_with_host()
-        return percent
-
-    def remove_src(self, Liste):
-        for j in Liste:
-            for i in rdpcap(str(self.file)):
-                if j != i.src and j != i.dst:
-                    Liste.remove(j)
-                    break
-
-    def get_list_of_host(self):
-        set_of_src = set()
-        for i in rdpcap(str(self.file)):
-            set_of_src.add(i.src)
-            set_of_src.add(i.dst)
-        Liste = list(set_of_src)
-        if len(Liste) > 2:
-            self.remove_src(Liste)
-        else:
-            Liste.clear()
-            Liste.append(self.get_src(Liste))
-        return Liste
-
-    def get_src(self, Liste):
-        count_0 = 0
-        count_1 = 0
-        for i in rdpcap(str(self.file)):
-            if i.dst == Liste[0]:
-                count_0 += 1
-            elif i.dst == Liste[1]:
-                count_1 += 1
-        if count_0 > count_1:
-            src = Liste[0]
-        else:
-            src = Liste[1]
-        return src
-
-    def get_list_of_partners(self):
-        set_of_src = set()
-        set_of_partner = set()
-        for i in rdpcap(str(self.file)):
-            set_of_src.add(i.src)
-            set_of_src.add(i.dst)
-        Liste = list(set_of_src)
-        if len(Liste) > 2:
-            self.remove_src(Liste)
-            for i in rdpcap(str(self.file)):
-                if i.src not in Liste:
-                    set_of_partner.add(i.src)
-                if i.dst not in Liste:
-                    set_of_partner.add(i.dst)
-        else:
-            src = self.get_src(Liste)
-            for i in rdpcap(str(self.file)):
-                if i.src != src:
-                    set_of_partner.add(i.src)
-                if i.dst != src:
-                    set_of_partner.add(i.dst)
-        return list(set_of_partner)
-
-    def get_communication_number_with_host(self):
-        coll = []
-        counter = 0
-        set_of_src = set()
-        for i in rdpcap(str(self.file)):
-            coll.append((i.src, i.dst))
-            set_of_src.add(i.src)
-            set_of_src.add(i.dst)
-        Liste = list(set_of_src)
-        if len(Liste) > 2:
-            self.remove_src(Liste)
-            src_list = Liste
-            for i in src_list:
-                for j in coll:
-                    if j[0] == i or j[1] == i:
-                        counter += 1
-        else:
-            src = self.get_src(Liste)
-            for j in coll:
-                if j[0] == src or j[1] == src:
-                    counter += 1
-        return counter
-
-    def get_partner_number_to_host(self):
-        set_of_src = set()
-        set_of_partner = set()
-        for i in rdpcap(str(self.file)):
-            set_of_src.add(i.src)
-            set_of_src.add(i.dst)
-        Liste = list(set_of_src)
-        if len(Liste) > 2:
-            self.remove_src(Liste)
-            src_list = Liste
-            for i in rdpcap(str(self.file)):
-                if i.src in src_list:
-                    set_of_partner.add((i.src, i.dst))
-        else:
-            src = self.get_src(Liste)
-            for i in rdpcap(str(self.file)):
-                if i.src == src:
-                    set_of_partner.add((i.src, i.dst))
-        return len(set_of_partner)
-
-    def get_list_partner_communication_percent(self):
-        list1 = self.get_list_of_partners()
-        list2 = []
-        for i in list1:
-            list2.append((i, self.get_communication_percent(i)))
-        return list2
-
-    def get_frequency_of_video_stalls(self, puffer, bitrate):
-        return (bitrate - self.get_download_rate_by_second()) / puffer
-
-    def get_duration_of_video_stalls(self, puffer):
-        return puffer / self.get_download_rate_by_second()
-
-    def get_stalls_number(self, puffer, bitrate):
-        times = self.get_times()
-        mlvideos.normalize_times_from_times(times)
-        return self.get_frequency_of_video_stalls(puffer, bitrate) * times[-1]
-
-    def get_total_length_download_bytes(self):
-        set_of_src = set()
-        count_download = 0
-        for i in rdpcap(str(self.file)):
-            set_of_src.add(i.src)
-            set_of_src.add(i.dst)
-        Liste = list(set_of_src)
-        if len(Liste) > 2:
-            self.remove_src(Liste)
-            src_list = Liste
-            for i in rdpcap(str(self.file)):
-                if i.dst in src_list:
-                    count_download += len(i)
-        else:
-            src = self.get_src(Liste)
-            for i in rdpcap(str(self.file)):
-                if i.dst == src:
-                    count_download += len(i)
-        return count_download
-
+    # returns the packets count
     def get_packets_count(self):
-        count = 0
+        packets_count = 0
         for (pkt_data, pkt_metadata,) in RawPcapReader(str(self.file)):
-            count += 1
-        return count
+            packets_count += 1
+        return packets_count
 
-    def get_packets_count_by_second(self):
-        count = 0
-        second = 1.000000
-        first_time = self.get_times()[0]
-        count_list = []
-        for i in self.get_times():
-            j = i - first_time
-            if (j > 2):
-                count_list.append(count)
-                for k in range(j-2):
-                    count_list.append(0)
-                count = 0
-            if Decimal(i - first_time) <= second:
-                count += 1
-            else:
-                count_list.append(count)
-                first_time = i
-                count = 1
-        count_list.append(count)
-        return count_list
+    def get_frequency_of_video_stalls(self, puffer_second, bitrate_mbit):
+        return (bitrate_mbit - self.get_download_rate_by_second()) / puffer_second
 
-    def get_download_rate_by_second(self):
-        set_of_src = set()
-        count_download = 0
-        for i in rdpcap(str(self.file)):
-            set_of_src.add(i.src)
-            set_of_src.add(i.dst)
-        Liste = list(set_of_src)
-        if len(Liste) > 2:
-            self.remove_src(Liste)
-            src_list = Liste
-            for i in rdpcap(str(self.file)):
-                if i.dst in src_list:
-                    count_download += len(i)
-        else:
-            src = self.get_src(Liste)
-            for i in rdpcap(str(self.file)):
-                if i.dst == src:
-                    count_download += len(i)
-        times = self.get_times()
-        mlvideos.normalize_times_from_times(times)
-        download_rate = math.floor(((8 * count_download)/times[-1]))
-        return download_rate
+    def get_duration_of_video_stalls(self, puffer_second):
+        return puffer_second / self.get_download_rate_by_second()
 
-    def get_upload_rate_by_second(self):
-        set_of_src = set()
-        count_upload = 0
-        for i in rdpcap(str(self.file)):
-            set_of_src.add(i.src)
-            set_of_src.add(i.dst)
-        Liste = list(set_of_src)
-        if len(Liste) > 2:
-            self.remove_src(Liste)
-            src_list = Liste
-            for i in rdpcap(str(self.file)):
-                if i.src in src_list:
-                    count_upload += len(i)
-        else:
-            src = self.get_src(Liste)
-            for i in rdpcap(str(self.file)):
-                if i.src == src:
-                    count_upload += len(i)
-        times = self.get_times()
-        mlvideos.normalize_times_from_times(times)
-        upload_rate = math.floor(((8*count_upload)/times[-1])/1000)
-        return upload_rate
-
-    def get_page_load_time_half(self):
-        size = math.floor(self.get_total_length_download_bytes()/2)
-        return self.get_page_load_time(size)
-
-    def get_page_load_time_quarter(self):
-        size = math.floor(self.get_total_length_download_bytes()/4)
-        return self.get_page_load_time(size)
-
-    def get_page_load_time_three_quarters(self):
-        size = math.floor(self.get_total_length_download_bytes()*3/4)
-        return self.get_page_load_time(size)
-
-    def get_page_load_time(self):
-        set_of_src = set()
-        count_download = 0
-        page_load_time = []
-        for i in rdpcap(str(self.file)):
-            set_of_src.add(i.src)
-            set_of_src.add(i.dst)
-        Liste = list(set_of_src)
-        if len(Liste) > 2:
-            self.remove_src(Liste)
-            src_list = Liste
-            for i in rdpcap(str(self.file)):
-                if i.dst in src_list:
-                    if count_download <= self.get_total_length_download_bytes():
-                        count_download += len(i)
-                        page_load_time.append(i.time)
-                    else:
-                        break
-        else:
-            src = self.get_src(Liste)
-            for i in rdpcap(str(self.file)):
-                if i.dst == src:
-                    if count_download <= self.get_total_length_download_bytes():
-                        count_download += len(i)
-                        page_load_time.append(i.time)
-                    else:
-                        break
-        mlvideos.normalize_times_from_times(page_load_time)
-        return page_load_time[-1]
+    def get_stalls_number(self, puffer_second, bitrate_mbit):
+        mlvideos.normalize_times_from_times(self.times)
+        return self.get_frequency_of_video_stalls(puffer_second, bitrate_mbit) * self.times[-1]
 
     def calc_deltas(self, start=Decimal(0), end=Decimal(0)):
-        times = self.get_times()
-        mlvideos.normalize_times_from_times(times)
-        end = times[-1] if end == Decimal(0) else end
-        times = [i for i in times if start <= i <= end]
-        self.deltas = list([float(delta) for delta in mlvideos.get_deltas_from_times(times)])
+        mlvideos.normalize_times_from_times(self.times)
+        end = self.times[-1] if end == Decimal(0) else end
+        times_ = [i for i in self.times if start <= i <= end]
+        self.deltas = list([float(delta) for delta in mlvideos.get_deltas_from_times(times_)])
 
     def get_deltas(self) -> List[float]:
         if not self.deltas:
@@ -389,3 +159,229 @@ class Pcap:
     def get_stats(self):
         self.collect_stats()
         return pd.DataFrame.from_dict(self.stats)
+
+    # returns percent of the communication between host and the partner_ip --> how much connections with the
+    # partner_ip through the whole connections
+    def get_communication_percent(self, partner_ip):
+        communication_host_partnerip_counter = 0
+        for tuple in self.list_of_tuple_src_dst:
+            if (tuple[0] == partner_ip or tuple[1] == partner_ip) and (
+                    tuple[0] in self.get_list_of_host_ip() or tuple[1] in self.get_list_of_host_ip()):
+                communication_host_partnerip_counter += 1
+        percent = communication_host_partnerip_counter / self.get_communication_number_with_host()
+        return percent
+
+    # To get a list just of host ips
+    def remove_partner_ips(self, list_of_all_ip_addr):
+        for ip in list_of_all_ip_addr:
+            for tuple in self.list_of_tuple_src_dst:
+                if ip != tuple[0] and ip != tuple[1]:
+                    list_of_all_ip_addr.remove(ip)
+                    break
+
+    # To get the host if we have just 2 ips (1 host, 1 partner)
+    def get_host_ip(self, list_of_all_ip_addr):
+        count_0 = 0
+        count_1 = 0
+        for tuple in self.list_of_tuple_src_dst:
+            if tuple[1] == list_of_all_ip_addr[0]:
+                count_0 += 1
+            elif tuple[1] == list_of_all_ip_addr[1]:
+                count_1 += 1
+        if count_0 > count_1:
+            host_ip = list_of_all_ip_addr[0]
+        else:
+            host_ip = list_of_all_ip_addr[1]
+        return host_ip
+
+    # removes partner ip addresses from the list of all ip addr --> returns the list of host ip
+    def get_list_of_host_ip(self):
+        list_of_all_ip_addr = list(self.set_of_all_ip_addr)
+        if len(list_of_all_ip_addr) > 2:
+            self.remove_partner_ips(list_of_all_ip_addr)
+        else:
+            list_of_all_ip_addr.clear()
+            list_of_all_ip_addr.append(self.get_host_ip(list_of_all_ip_addr))
+        return list_of_all_ip_addr
+
+    # returns a list of all ip addrs
+    def get_set_of_all_ip_addr(self):
+        set_of_all_ip_addr = set()
+        for tuple in self.list_of_tuple_src_dst:
+            set_of_all_ip_addr.add(tuple[0])
+            set_of_all_ip_addr.add(tuple[1])
+        return set_of_all_ip_addr
+
+    # returns a list of ip partners
+    def get_list_of_partners(self):
+        set_of_partner = set()
+        list_of_all_ip_addr = list(self.set_of_all_ip_addr)
+        if len(list_of_all_ip_addr) > 2:
+            self.remove_partner_ips(list_of_all_ip_addr)
+            for tuple in self.list_of_tuple_src_dst:
+                if tuple[0] not in list_of_all_ip_addr:
+                    set_of_partner.add(tuple[0])
+                if tuple[1] not in list_of_all_ip_addr:
+                    set_of_partner.add(tuple[1])
+        else:
+            host_ip = self.get_host_ip(list_of_all_ip_addr)
+            for tuple in self.list_of_tuple_src_dst:
+                if tuple[0] != host_ip:
+                    set_of_partner.add(tuple[0])
+                if tuple[1] != host_ip:
+                    set_of_partner.add(tuple[1])
+        return list(set_of_partner)
+
+    # returns how much connections with the host
+    def get_communication_number_with_host(self):
+        counter = 0
+        list_of_all_ip_addr = list(self.set_of_all_ip_addr)
+        if len(list_of_all_ip_addr) > 2:
+            self.remove_partner_ips(list_of_all_ip_addr)
+            host_list = list_of_all_ip_addr
+            for host in host_list:
+                for tuple in self.list_of_tuple_src_dst:
+                    if tuple[0] == host or tuple[1] == host:
+                        counter += 1
+        else:
+            host_ip = self.get_host_ip(list_of_all_ip_addr)
+            for tuple in self.list_of_tuple_src_dst:
+                if tuple[0] == host_ip or tuple[1] == host_ip:
+                    counter += 1
+        return counter
+
+    # returns how much partner with the host
+    def get_partner_number_to_host(self):
+        set_of_partner = set()
+        list_of_all_ip_addr = list(self.set_of_all_ip_addr)
+        if len(list_of_all_ip_addr) > 2:
+            self.remove_partner_ips(list_of_all_ip_addr)
+            src_list = list_of_all_ip_addr
+            for i in rdpcap(str(self.file)):
+                if i.src in src_list:
+                    set_of_partner.add((i.src, i.dst))
+        else:
+            host_ip = self.get_host_ip(list_of_all_ip_addr)
+            for tuple in self.list_of_tuple_src_dst:
+                if tuple[0] == host_ip:
+                    set_of_partner.add((tuple[0], tuple[1]))
+        return len(set_of_partner)
+
+    # returns a list of tuples --> ip of the partner, how much percent communication with the host
+    def get_list_partner_communication_percent(self):
+        list_of_partners = self.get_list_of_partners()
+        list_of_tuple_ip_communication_percent = []
+        for i in list_of_partners:
+            list_of_tuple_ip_communication_percent.append((i, self.get_communication_percent(i)))
+        return list_of_tuple_ip_communication_percent
+
+    def get_total_length_download(self):
+        download_length = 0
+        list_of_all_ip_addr = list(self.set_of_all_ip_addr)
+        if len(list_of_all_ip_addr) > 2:
+            self.remove_partner_ips(list_of_all_ip_addr)
+            src_list = list_of_all_ip_addr
+            for i in rdpcap(str(self.file)):
+                if i.dst in src_list:
+                    download_length += len(i)
+        else:
+            host_ip = self.get_host_ip(list_of_all_ip_addr)
+            for i in rdpcap(str(self.file)):
+                if i.dst == host_ip:
+                    download_length += len(i)
+        return decimal.Decimal(download_length) * 8 / 1000000  # in mbit
+
+    def get_packets_count_by_second(self):
+        count = 0
+        second = 1
+        first_time = self.times[0]
+        count_list = []
+        for i in self.times:
+            j = math.ceil(i - first_time)
+            if j > 2:
+                count_list.append(count)
+                for k in range(j - 2):
+                    count_list.append(0)
+                count = 0
+            if Decimal(i - first_time) <= second:
+                count += 1
+            else:
+                count_list.append(count)
+                first_time = i
+                count = 1
+        count_list.append(count)
+        return count_list
+
+    def get_download_rate_by_second(self):
+        download_length = 0
+        list_of_all_ip_addr = list(self.set_of_all_ip_addr)
+        if len(list_of_all_ip_addr) > 2:
+            self.remove_partner_ips(list_of_all_ip_addr)
+            src_list = list_of_all_ip_addr
+            for i in rdpcap(str(self.file)):
+                if i.dst in src_list:
+                    download_length += len(i)
+        else:
+            host_ip = self.get_host_ip(list_of_all_ip_addr)
+            for i in rdpcap(str(self.file)):
+                if i.dst == host_ip:
+                    download_length += len(i)
+        download_length_mbit = decimal.Decimal(download_length) * 8 / 1000000  # from byte to mbit
+        mlvideos.normalize_times_from_times(self.times)
+        return math.floor((download_length_mbit / math.ceil(self.times[-1])))
+
+    def get_upload_rate_by_second(self):
+        upload_length = 0
+        list_of_all_ip_addr = list(self.set_of_all_ip_addr)
+        if len(list_of_all_ip_addr) > 2:
+            self.remove_partner_ips(list_of_all_ip_addr)
+            src_list = list_of_all_ip_addr
+            for i in rdpcap(str(self.file)):
+                if i.src in src_list:
+                    upload_length += len(i)
+        else:
+            host_ip = self.get_host_ip(list_of_all_ip_addr)
+            for i in rdpcap(str(self.file)):
+                if i.src == host_ip:
+                    upload_length += len(i)
+        upload_length_mbit = decimal.Decimal(upload_length) * 8 / 1000000  # from byte to mbit
+        mlvideos.normalize_times_from_times(self.times)
+        return math.floor((upload_length_mbit / math.ceil(self.times[-1])))
+
+    def get_page_load_time_total(self):
+        return self.get_page_load_time(math.floor(self.get_total_length_download()))
+
+    def get_page_load_time_half(self):
+        return self.get_page_load_time(math.floor(self.get_total_length_download() / 2))
+
+    def get_page_load_time_quarter(self):
+        return self.get_page_load_time(math.floor(self.get_total_length_download() / 4))
+
+    def get_page_load_time_three_quarters(self):
+        return self.get_page_load_time(math.floor(self.get_total_length_download() * 3 / 4))
+
+    def get_page_load_time(self, fraction: int):
+        count_download = 0
+        page_load_time = []
+        list_of_all_ip_addr = list(self.set_of_all_ip_addr)
+        if len(list_of_all_ip_addr) > 2:
+            self.remove_partner_ips(list_of_all_ip_addr)
+            src_list = list_of_all_ip_addr
+            for i in rdpcap(str(self.file)):
+                if i.dst in src_list:
+                    if count_download <= fraction:
+                        count_download += len(i)
+                        page_load_time.append(i.time)
+                    else:
+                        break
+        else:
+            host_ip = self.get_host_ip(list_of_all_ip_addr)
+            for i in rdpcap(str(self.file)):
+                if i.dst == host_ip:
+                    if count_download <= fraction:
+                        count_download += len(i)
+                        page_load_time.append(i.time)
+                    else:
+                        break
+        mlvideos.normalize_times_from_times(page_load_time)
+        return page_load_time[-1]

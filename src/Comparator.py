@@ -17,11 +17,11 @@ class Comparator:
         self.comparisons = {"Original": {"Number of packets in OrgFile": self.original.get_packets_count(),
                                          "Download rate in kbps": float(self.original.get_download_rate_by_second()),
                                          "Upload rate in kbps": float(self.original.get_upload_rate_by_second()),
-                                         "Length of all packets in kbits": float(self.original.get_total_length())},
+                                         "Length of all packets in kbits": float(self.original.get_total_length_in_mbit())},
                             "Target": {"Number of packets in testFile": self.target.get_packets_count(),
                                        "Download rate in kbps": float(self.target.get_download_rate_by_second()),
                                        "Upload rate in kbps": float(self.target.get_upload_rate_by_second()),
-                                       "Length of all packets in kbits" :float(self.original.get_total_length())
+                                       "Length of all packets in kbits" :float(self.original.get_total_length_in_mbit())
                                        },
                             "Chi_squared_test": {},
                             "Kolmogorov_smirnov_test": {},
@@ -39,9 +39,9 @@ class Comparator:
         histogram_augmented = [value * factor for value in histogram_augmented]
         self.comparisons["Chi_squared_test"]['Delta'] = stats.chisquare(histogram_original, histogram_augmented).pvalue
 
-        out, bins_length = pd.qcut(self.original.get_length(), math.floor(1.88 * len(self.original.get_length()) ** (2 / 5)), labels=False, retbins=True, duplicates='drop')
-        hist_original_length, bin_edges = np.histogram(self.original.get_length(), bins_length, range=None, normed=None, weights=None, density=None)
-        hist_augmented_length, bin_edges = np.histogram(self.target.get_length(), bins_length, range=None, normed=None, weights=None,density=None)
+        out, bins_length = pd.qcut(self.original.get_lengths(), math.floor(1.88 * len(self.original.get_lengths()) ** (2 / 5)), labels=False, retbins=True, duplicates='drop')
+        hist_original_length, bin_edges = np.histogram(self.original.get_lengths(), bins_length, range=None, normed=None, weights=None, density=None)
+        hist_augmented_length, bin_edges = np.histogram(self.target.get_lengths(), bins_length, range=None, normed=None, weights=None,density=None)
         self.comparisons["Chi_squared_test"]['Length'] = stats.chisquare(hist_augmented_length, hist_original_length).pvalue
 
         out, bins_packets_seconds = pd.qcut(self.original.get_packets_count_by_second(),math.floor(1.88 * len(self.original.get_packets_count_by_second()) ** (2 / 5)), labels=False,retbins=True, duplicates='drop')
@@ -68,7 +68,7 @@ class Comparator:
         self.comparisons["Kolmogorov_smirnov_test"]['Deltas'] = stats.ks_2samp(self.target.get_deltas(), self.original.get_deltas()).pvalue
 
 
-        self.comparisons["Kolmogorov_smirnov_test"]['Length'] = stats.ks_2samp(self.target.get_length(), self.original.get_length()).pvalue
+        self.comparisons["Kolmogorov_smirnov_test"]['Length'] = stats.ks_2samp(self.target.get_lengths(), self.original.get_lengths()).pvalue
         self.comparisons["Kolmogorov_smirnov_test"]['Packet number by second'] = stats.ks_2samp(self.target.get_packets_count_by_second(),
                                                                                self.original.get_packets_count_by_second()).pvalue
 
@@ -88,14 +88,14 @@ class Comparator:
 
     def get_earth_mover_distance(self):
         self.comparisons["Earth_mover_distance"]['Delta'] = stats.wasserstein_distance(self.original.get_deltas(), self.target.get_deltas())
-        self.comparisons["Earth_mover_distance"]['Length'] = stats.wasserstein_distance(self.original.get_length(), self.target.get_length())
+        self.comparisons["Earth_mover_distance"]['Length'] = stats.wasserstein_distance(self.original.get_lengths(), self.target.get_lengths())
         self.comparisons["Earth_mover_distance"]['Packet number by second'] = stats.wasserstein_distance(self.original.get_packets_count_by_second(), self.target.get_packets_count_by_second())
 
     def get_dynamic_time_warping(self, plot=True):
         _dtw = dtw.dtw(self.original.get_deltas(), self.target.get_deltas(), keep_internals=True)
         self.comparisons["Dynamic_time_warping"]['Delta'] = _dtw.distance
 
-        _dtw_length = dtw.dtw(self.original.get_length(), self.target.get_length(), keep_internals=True)
+        _dtw_length = dtw.dtw(self.original.get_lengths(), self.target.get_lengths(), keep_internals=True)
         self.comparisons["Dynamic_time_warping"]['Length'] = _dtw_length.distance
 
         _dtw_packet_second = dtw.dtw(self.original.get_packets_count_by_second(), self.target.get_packets_count_by_second(), keep_internals=True)
