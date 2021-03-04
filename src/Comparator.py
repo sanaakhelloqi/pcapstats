@@ -15,13 +15,42 @@ class Comparator:
         self.original = original
         self.target = target
         self.comparisons = {"Original": {"Number of packets in OrgFile": self.original.get_packets_count(),
-                                         "Download rate in kbps": float(self.original.get_download_rate_by_second()),
-                                         "Upload rate in kbps": float(self.original.get_upload_rate_by_second()),
-                                         "Length of all packets in kbits": float(self.original.get_total_length_in_mbit())},
+                                         "Download rate in Mbit/s": float(self.original.get_download_rate_by_second()),
+                                         "Upload rate in Mbit/s": float(self.original.get_upload_rate_by_second()),
+                                         "Length of all packets in Mbit": float(self.original.get_total_length_in_mbit()),
+                                         "Duration of video stalls: Puffer = 30s": float(
+                                             self.original.get_duration_of_video_stalls(30)),
+                                         "Frequency of video stalls: bitrate= 8Mbit/s, puffer= 30s": float(
+                                             self.original.get_frequency_of_video_stalls(30, 8)),
+                                         "Stalls number:": float(self.original.get_stalls_number(30, 8)),
+                                         "Total download length in Mbit:": float(self.original.get_total_length_download()),
+                                         "Page load time in second for the total download size": float(
+                                             self.original.get_page_load_time_total()),
+                                         "Page load time for the half of the download size": float(
+                                             self.original.get_page_load_time_half()),
+                                         "Page load time for the quarter of the download size": float(
+                                             self.original.get_page_load_time_quarter()),
+                                         "Page load time for the three quarters of the download size": float(
+                                             self.original.get_page_load_time_three_quarters())
+                                         },
                             "Target": {"Number of packets in testFile": self.target.get_packets_count(),
-                                       "Download rate in kbps": float(self.target.get_download_rate_by_second()),
-                                       "Upload rate in kbps": float(self.target.get_upload_rate_by_second()),
-                                       "Length of all packets in kbits" :float(self.original.get_total_length_in_mbit())
+                                       "Download rate in Mbit/s": float(self.target.get_download_rate_by_second()),
+                                       "Upload rate in Mbit/s": float(self.target.get_upload_rate_by_second()),
+                                       "Length of all packets in Mbit":float(self.target.get_total_length_in_mbit()),
+                                       "Duration of video stalls: Puffer = 30s": float(
+                                           self.target.get_duration_of_video_stalls(30)),
+                                       "Frequency of video stalls: bitrate= 8Mbit/s, puffer= 30s": float(
+                                           self.target.get_frequency_of_video_stalls(30, 8)),
+                                       "Stalls number:": float(self.target.get_stalls_number(30, 8)),
+                                       "Total download length in Mbit:": float(self.target.get_total_length_download()),
+                                       "Page load time in second for the total download size": float(
+                                           self.target.get_page_load_time_total()),
+                                       "Page load time for the half of the download size": float(
+                                           self.target.get_page_load_time_half()),
+                                       "Page load time for the quarter of download size": float(
+                                           self.target.get_page_load_time_quarter()),
+                                       "Page load time for the three quarters of the download size": float(
+                                           self.target.get_page_load_time_three_quarters())
                                        },
                             "Chi_squared_test": {},
                             "Kolmogorov_smirnov_test": {},
