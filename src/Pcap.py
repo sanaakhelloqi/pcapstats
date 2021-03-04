@@ -38,7 +38,7 @@ class Pcap:
         total_length = 0
         for pkt in rdpcap(str(self.file)):
             total_length += len(pkt)
-        return math.floor((total_length * 8) / 1000000)  # from byte to mbit
+        return decimal.Decimal(total_length) * 8 / 1000000  # from byte to mbit
 
     # returns the packets count
     def get_packets_count(self):
@@ -48,14 +48,14 @@ class Pcap:
         return packets_count
 
     def get_frequency_of_video_stalls(self, puffer_second, bitrate_mbit):
-        return (bitrate_mbit - self.get_download_rate_by_second()) / puffer_second
+        return max(((bitrate_mbit - self.get_download_rate_by_second()) / puffer_second), 0)
 
     def get_duration_of_video_stalls(self, puffer_second):
         return puffer_second / self.get_download_rate_by_second()
 
     def get_stalls_number(self, puffer_second, bitrate_mbit):
         mlvideos.normalize_times_from_times(self.times)
-        return self.get_frequency_of_video_stalls(puffer_second, bitrate_mbit) * self.times[-1]
+        return max(math.floor(self.get_frequency_of_video_stalls(puffer_second, bitrate_mbit) * self.times[-1]), 0)
 
     def calc_deltas(self, start=Decimal(0), end=Decimal(0)):
         mlvideos.normalize_times_from_times(self.times)
@@ -325,7 +325,7 @@ class Pcap:
                     download_length += len(i)
         download_length_mbit = decimal.Decimal(download_length) * 8 / 1000000  # from byte to mbit
         mlvideos.normalize_times_from_times(self.times)
-        return math.floor((download_length_mbit / math.ceil(self.times[-1])))
+        return decimal.Decimal((download_length_mbit / self.times[-1]))
 
     def get_upload_rate_by_second(self):
         upload_length = 0
@@ -343,19 +343,19 @@ class Pcap:
                     upload_length += len(i)
         upload_length_mbit = decimal.Decimal(upload_length) * 8 / 1000000  # from byte to mbit
         mlvideos.normalize_times_from_times(self.times)
-        return math.floor((upload_length_mbit / math.ceil(self.times[-1])))
+        return decimal.Decimal((upload_length_mbit / self.times[-1]))
 
     def get_page_load_time_total(self):
-        return self.get_page_load_time(math.floor(self.get_total_length_download()))
+        return self.get_page_load_time(self.get_total_length_download())
 
     def get_page_load_time_half(self):
-        return self.get_page_load_time(math.floor(self.get_total_length_download() / 2))
+        return self.get_page_load_time(decimal.Decimal(self.get_total_length_download() / 2))
 
     def get_page_load_time_three_quarters(self):
-        return self.get_page_load_time(math.floor(self.get_total_length_download() * 3 / 4))
+        return self.get_page_load_time(decimal.Decimal(self.get_total_length_download() * 3 / 4))
 
     def get_page_load_time_quarter(self):
-        return self.get_page_load_time(math.floor(self.get_total_length_download() / 4))
+        return self.get_page_load_time(decimal.Decimal(self.get_total_length_download() / 4))
 
     def get_page_load_time(self, pagesize):
         download_length = 0
