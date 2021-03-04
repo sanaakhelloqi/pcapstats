@@ -19,14 +19,11 @@ class Pcap:
         self.lengths = self.get_lengths()
         self.total_length_in_mbit = self.get_total_length_in_mbit()
         self.packets_count = self.get_packets_count()
-        self.set_of_all_ip_addr = self.get_set_of_all_ip_addr()
         self.list_of_tuple_src_dst = self.get_list_of_tuple_src_dst()
+        self.set_of_all_ip_addr = self.get_set_of_all_ip_addr()
 
     def get_list_of_tuple_src_dst(self):
-        list_of_tuple_src_dst = []
-        for pkt in rdpcap(str(self.file)):
-            list_of_tuple_src_dst.append((pkt.src, pkt.dst))
-        return list_of_tuple_src_dst
+        return [(pkt.src, pkt.dst) for pkt in rdpcap(str(self.file))]
 
     # get_times returns a list of arrival time of packets
     def get_times(self) -> List[Decimal]:
@@ -354,14 +351,14 @@ class Pcap:
     def get_page_load_time_half(self):
         return self.get_page_load_time(math.floor(self.get_total_length_download() / 2))
 
-    def get_page_load_time_quarter(self):
-        return self.get_page_load_time(math.floor(self.get_total_length_download() / 4))
-
     def get_page_load_time_three_quarters(self):
         return self.get_page_load_time(math.floor(self.get_total_length_download() * 3 / 4))
 
-    def get_page_load_time(self, fraction: int):
-        count_download = 0
+    def get_page_load_time_quarter(self):
+        return self.get_page_load_time(math.floor(self.get_total_length_download() / 4))
+
+    def get_page_load_time(self, pagesize):
+        download_length = 0
         page_load_time = []
         list_of_all_ip_addr = list(self.set_of_all_ip_addr)
         if len(list_of_all_ip_addr) > 2:
@@ -369,8 +366,8 @@ class Pcap:
             src_list = list_of_all_ip_addr
             for i in rdpcap(str(self.file)):
                 if i.dst in src_list:
-                    if count_download <= fraction:
-                        count_download += len(i)
+                    if download_length <= pagesize:
+                        download_length += len(i)
                         page_load_time.append(i.time)
                     else:
                         break
@@ -378,8 +375,8 @@ class Pcap:
             host_ip = self.get_host_ip(list_of_all_ip_addr)
             for i in rdpcap(str(self.file)):
                 if i.dst == host_ip:
-                    if count_download <= fraction:
-                        count_download += len(i)
+                    if download_length <= pagesize:
+                        download_length += len(i)
                         page_load_time.append(i.time)
                     else:
                         break
