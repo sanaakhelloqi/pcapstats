@@ -3,6 +3,7 @@ import math
 import pandas as pd
 import numpy as np
 import decimal
+import collections
 from pathlib import Path
 from decimal import Decimal
 from typing import List
@@ -17,7 +18,7 @@ class Pcap:
         self.deltas = None
         self.times = self.get_times()
         self.lengths = self.get_lengths()
-        self.total_length_in_mbit = self.get_total_length_in_mbit()
+        self.total_length = self.get_total_length()
         self.packets_count = self.get_packets_count()
         self.list_of_tuple_src_dst = self.get_list_of_tuple_src_dst()
         self.set_of_all_ip_addr = self.get_set_of_all_ip_addr()
@@ -34,11 +35,11 @@ class Pcap:
         return [len(pkt) for pkt in rdpcap(str(self.file))]
 
     # get_total_length returns the total length of packets in mbit
-    def get_total_length_in_mbit(self):
+    def get_total_length(self):
         total_length = 0
         for pkt in rdpcap(str(self.file)):
             total_length += len(pkt)
-        return decimal.Decimal(total_length) * 8 / 1000000  # from byte to mbit
+        return decimal.Decimal(total_length) * 8 / 1000 # from byte to kbit
 
     # returns the packets count
     def get_packets_count(self):
@@ -46,16 +47,6 @@ class Pcap:
         for (pkt_data, pkt_metadata,) in RawPcapReader(str(self.file)):
             packets_count += 1
         return packets_count
-
-    def get_frequency_of_video_stalls(self, puffer_second, bitrate_mbit):
-        return max(((bitrate_mbit - self.get_download_rate_by_second()) / puffer_second), 0)
-
-    def get_duration_of_video_stalls(self, puffer_second):
-        return puffer_second / self.get_download_rate_by_second()
-
-    def get_stalls_number(self, puffer_second, bitrate_mbit):
-        mlvideos.normalize_times_from_times(self.times)
-        return max(math.floor(self.get_frequency_of_video_stalls(puffer_second, bitrate_mbit) * self.times[-1]), 0)
 
     def calc_deltas(self, start=Decimal(0), end=Decimal(0)):
         mlvideos.normalize_times_from_times(self.times)
@@ -134,12 +125,6 @@ class Pcap:
         else:
             self.stats["median"] = np.median(self.deltas)
 
-    def get_autocorrelation(self, lag=0):
-        if not self.deltas:
-            self.calc_deltas()
-        else:
-            self.stats["autocorrelation"] = pd.Series(self.deltas).autocorr(lag)
-
     def collect_stats(self):
         self.get_mean()
         self.get_std()
@@ -151,7 +136,6 @@ class Pcap:
         self.get_kurtosis()
         self.get_skewness()
         self.get_median()
-        self.get_autocorrelation()
 
     def get_stats(self):
         self.collect_stats()
@@ -272,42 +256,19 @@ class Pcap:
             list_of_tuple_ip_communication_percent.append((i, self.get_communication_percent(i)))
         return list_of_tuple_ip_communication_percent
 
-    def get_total_length_download(self):
-        download_length = 0
-        list_of_all_ip_addr = list(self.set_of_all_ip_addr)
-        if len(list_of_all_ip_addr) > 2:
-            self.remove_partner_ips(list_of_all_ip_addr)
-            src_list = list_of_all_ip_addr
-            for i in rdpcap(str(self.file)):
-                if i.dst in src_list:
-                    download_length += len(i)
-        else:
-            host_ip = self.get_host_ip(list_of_all_ip_addr)
-            for i in rdpcap(str(self.file)):
-                if i.dst == host_ip:
-                    download_length += len(i)
-        return decimal.Decimal(download_length) * 8 / 1000000  # in mbit
-
+    # returns dictionary: Keys = seconds and values= packets count
     def get_packets_count_by_second(self):
-        count = 0
-        second = 1
-        first_time = self.times[0]
-        count_list = []
+        mlvideos.normalize_times_from_times(self.times)
+        times_ = []
         for i in self.times:
-            j = math.ceil(i - first_time)
-            if j > 2:
-                count_list.append(count)
-                for k in range(j - 2):
-                    count_list.append(0)
-                count = 0
-            if Decimal(i - first_time) <= second:
-                count += 1
-            else:
-                count_list.append(count)
-                first_time = i
-                count = 1
-        count_list.append(count)
-        return count_list
+            times_.append(math.floor(i))
+        dict_ = dict(collections.Counter(times_))
+        max_second = math.ceil(times_[-1])
+        t_dict = {second: 0 for second in range(0, max_second + 1)}
+        for key, value in dict_.items():
+            t_dict[key] += value
+        list_second_pkt_number = list(t_dict.values())
+        return list_second_pkt_number
 
     def get_download_rate_by_second(self):
         download_length = 0
@@ -323,9 +284,151 @@ class Pcap:
             for i in rdpcap(str(self.file)):
                 if i.dst == host_ip:
                     download_length += len(i)
-        download_length_mbit = decimal.Decimal(download_length) * 8 / 1000000  # from byte to mbit
+        download_length_kbit = decimal.Decimal(download_length) * 8 / 1000  # from byte to kbit
         mlvideos.normalize_times_from_times(self.times)
-        return decimal.Decimal((download_length_mbit / self.times[-1]))
+        return decimal.Decimal((download_length_kbit / self.times[-1]))
+
+    def get_total_length_downloaded(self):
+        download_length = 0
+        list_of_all_ip_addr = list(self.set_of_all_ip_addr)
+        if len(list_of_all_ip_addr) > 2:
+            self.remove_partner_ips(list_of_all_ip_addr)
+            src_list = list_of_all_ip_addr
+            for i in rdpcap(str(self.file)):
+                if i.dst in src_list:
+                    download_length += len(i)
+        else:
+            host_ip = self.get_host_ip(list_of_all_ip_addr)
+            for i in rdpcap(str(self.file)):
+                if i.dst == host_ip:
+                    download_length += len(i)
+        return decimal.Decimal(download_length) * 8 / 1000  # from byte to kbit
+
+    def get_time_dr_dict(self):
+        list_times = []
+        list_lengths = []
+
+        list_of_all_ip_addr = list(self.set_of_all_ip_addr)
+        if len(list_of_all_ip_addr) > 2:
+            self.remove_partner_ips(list_of_all_ip_addr)
+            src_list = list_of_all_ip_addr
+            for i in rdpcap(str(self.file)):
+                if i.dst in src_list:
+                    list_times.append(i.time)
+                    list_lengths.append(len(i)*8/1000)
+        else:
+            host_ip = self.get_host_ip(list_of_all_ip_addr)
+            for i in rdpcap(str(self.file)):
+                if i.dst == host_ip:
+                    list_times.append(i.time)
+                    list_lengths.append(len(i)*8/1000)
+
+        mlvideos.normalize_times_from_times(list_times)
+        list_times2 = [(math.ceil(list_times[i])) for i in range(0, len(list_times))]
+        merged_list = [(list_times2[i], list_lengths[i]) for i in range(0, len(list_lengths))]
+        time_dict = {}
+        for packet in merged_list:
+            if time_dict.get(packet[0]) == None:
+                time_dict[packet[0]] = packet[1]
+            else:
+                time_dict[packet[0]] += packet[1]
+
+        times = mlvideos.normalize_times_from_times(self.times)
+        max_second = math.ceil(times[-1])
+        time_dr_dict = {second: 0 for second in range(0, max_second + 1)}
+        for key, value in time_dict.items():
+            time_dr_dict[key] += value
+        return time_dr_dict
+
+    def get_total_stall_time_total_playing_time(self, alpha, bitrate):
+        buffer = 0
+        dl = True
+        play = False
+        delta_t_list = []
+        delta_t2_list = []
+        time_dr_dict = self.get_time_dr_dict()
+        for time, download_rate in time_dr_dict.items():
+            buffer += download_rate / bitrate
+            if dl and not play and buffer >= alpha:
+                buffer = max(buffer - 1, 0)
+                play = True
+                dl = True
+                delta_t_list.append(alpha * bitrate / download_rate)
+            #elif play == False and dl == True:
+            elif buffer == 0 and dl and play:
+                play = False
+                dl = True
+                delta_t2_list.append((alpha * bitrate) / (bitrate - download_rate))
+
+            elif play and dl:
+                buffer = max(buffer - 1, 0)
+
+        total_stall_time = 0
+        for time in delta_t_list:
+            total_stall_time += time
+
+        total_playing_time = 0
+        for time in delta_t2_list:
+            total_playing_time += time
+
+        return total_stall_time, total_playing_time
+
+    def get_total_stall_count(self, alpha, bitrate):
+        buffer = 0
+        dl = True
+        play = False
+        delta_t_list = []
+        delta_t2_list = []
+        time_dr_dict = self.get_time_dr_dict()
+        for time, download_rate in time_dr_dict.items():
+            buffer += download_rate / bitrate
+            if dl and not play and buffer >= alpha:
+                buffer = max(buffer - 1, 0)
+                play = True
+                dl = True
+                delta_t_list.append(alpha * bitrate / download_rate)
+
+            # elif play == False and dl == True:
+            elif buffer == 0 and dl and play:
+                play = False
+                dl = True
+                delta_t2_list.append((alpha * bitrate) / (bitrate - download_rate))
+
+            elif play and dl:
+                buffer = max(buffer - 1, 0)
+
+        total_stall_time = 0
+        for time in delta_t_list:
+            total_stall_time += time
+
+        stallings_count = len(delta_t_list)
+        return stallings_count
+
+    def get_initial_delay(self, alpha, bitrate):
+        buffer = 0
+        dl = True
+        play = False
+        delta_t_list = []
+        delta_t2_list = []
+        time_dr_dict = self.get_time_dr_dict()
+        for time, download_rate in time_dr_dict.items():
+            buffer += download_rate / bitrate
+            if dl and not play and buffer >= alpha:
+                buffer = max(buffer - 1, 0)
+                play = True
+                dl = True
+                delta_t_list.append(alpha * bitrate / download_rate)
+
+            # elif play == False and dl == True:
+            elif buffer == 0 and dl and play:
+                play = False
+                dl = True
+                delta_t2_list.append((alpha * bitrate) / (bitrate - download_rate))
+
+            elif play and dl:
+                buffer = max(buffer - 1, 0)
+
+        return delta_t_list[0]
 
     def get_upload_rate_by_second(self):
         upload_length = 0
@@ -341,21 +444,21 @@ class Pcap:
             for i in rdpcap(str(self.file)):
                 if i.src == host_ip:
                     upload_length += len(i)
-        upload_length_mbit = decimal.Decimal(upload_length) * 8 / 1000000  # from byte to mbit
+        upload_length_kbit = decimal.Decimal(upload_length) * 8 / 1000 # from byte to kbit
         mlvideos.normalize_times_from_times(self.times)
-        return decimal.Decimal((upload_length_mbit / self.times[-1]))
+        return decimal.Decimal((upload_length_kbit / self.times[-1]))
 
     def get_page_load_time_total(self):
-        return self.get_page_load_time(self.get_total_length_download())
+        return self.get_page_load_time(self.get_total_length_downloaded())
 
     def get_page_load_time_half(self):
-        return self.get_page_load_time(decimal.Decimal(self.get_total_length_download() / 2))
+        return self.get_page_load_time(decimal.Decimal(self.get_total_length_downloaded() / 2))
 
     def get_page_load_time_three_quarters(self):
-        return self.get_page_load_time(decimal.Decimal(self.get_total_length_download() * 3 / 4))
+        return self.get_page_load_time(decimal.Decimal(self.get_total_length_downloaded() * 3 / 4))
 
     def get_page_load_time_quarter(self):
-        return self.get_page_load_time(decimal.Decimal(self.get_total_length_download() / 4))
+        return self.get_page_load_time(decimal.Decimal(self.get_total_length_downloaded() / 4))
 
     def get_page_load_time(self, pagesize):
         download_length = 0

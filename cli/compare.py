@@ -1,14 +1,12 @@
-
-from typing import Any
-
 from src.Pcap import Pcap
 from src.Comparator import Comparator
-import src.utils as utils
+from src.visualize import visualize as viz
+
+import pickle
 import json
 import multiprocessing
 import click
 from scapy.error import Scapy_Exception
-import pandas as pd
 
 
 @click.command()
@@ -19,10 +17,9 @@ import pandas as pd
 @click.option("-vo", "--visualize-output", type=str, default="result.pdf")
 def compare(original, targets, output, visualize, visualize_output):
     comparison_df_list = []
-    pdf_output = []
+    viz_dict = {}
     queue = multiprocessing.Queue()
     procesess = []
-
     with click.progressbar(targets) as _targets:
         click.echo("Comparing pcap files...")
         original_pcap = Pcap(original)
@@ -40,37 +37,36 @@ def compare(original, targets, output, visualize, visualize_output):
 
         for _ in procesess:
             comparison_df_list.append(queue.get())
-            pdf_output.append(queue.get())
+            viz_dict = {**viz_dict, **queue.get()}
 
         for process in procesess:
             process.join()
 
-
     if comparison_df_list:
         click.echo(f"Writing results to {output}")
-
         #stats_df = pd.concat(comparison_df_list)
         #stats_df.to_csv(output, index=False)
-        #stats_df.to_json(r'{}.json'.format({output}), index=False, orient='table')
+        #stats_df.to_json(r'{}.json'.format(output), index=False, orient='table')
         jsonString = json.dumps(comparison_df_list)
-        jsonFile = open('{}.json'.format({output}), "w")
+        jsonFile = open('{}.json'.format(output), "w")
         jsonFile.write(jsonString)
         jsonFile.close()
     else:
         click.echo("No results generated.")
 
     if visualize:
-        if not pdf_output:
+        with open("listofdf.pkl", "wb") as f:
+            pickle.dump(viz_dict, f)
+        if not viz_dict:
             click.echo("Empty List.")
         else:
-            utils.merge_pdfs(pdf_output, delete_originals=True, out=visualize_output)
+            viz(viz_dict, 'hello_world.html')
 
 
 def compare_process(queue, comparator):
-    comp_df, pdfs = comparator.get_comparisons()
+    comp_df, viz = comparator.get_comparisons()
     queue.put(comp_df)
-    queue.put(pdfs)
-
+    queue.put(viz)
 
 
 if __name__ == "__main__":

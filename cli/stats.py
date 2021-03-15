@@ -23,7 +23,7 @@ def stats(files, output):
 
     click.echo(f"Writing results to {output}")
     jsonString = json.dumps(stats_df_list)
-    jsonFile = open('{}.json'.format({output}), "w")
+    jsonFile = open('{}.json'.format(output), "w")
     jsonFile.write(jsonString)
     jsonFile.close()
     #stats_df = pd.concat(stats_df_list)
