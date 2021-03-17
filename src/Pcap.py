@@ -7,7 +7,7 @@ import collections
 from pathlib import Path
 from decimal import Decimal
 from typing import List
-from scapy.all import rdpcap, RawPcapReader
+from scapy.all import rdpcap
 from scipy import stats
 
 
@@ -43,10 +43,7 @@ class Pcap:
 
     # returns the packets count
     def get_packets_count(self):
-        packets_count = 0
-        for (pkt_data, pkt_metadata,) in RawPcapReader(str(self.file)):
-            packets_count += 1
-        return packets_count
+        return len(self.get_times())
 
     def calc_deltas(self, start=Decimal(0), end=Decimal(0)):
         mlvideos.normalize_times_from_times(self.times)
@@ -140,17 +137,6 @@ class Pcap:
     def get_stats(self):
         self.collect_stats()
         return pd.DataFrame.from_dict(self.stats)
-
-    # returns percent of the communication between host and the partner_ip --> how much connections with the
-    # partner_ip through the whole connections
-    def get_communication_percent(self, partner_ip):
-        communication_host_partnerip_counter = 0
-        for tuple in self.list_of_tuple_src_dst:
-            if (tuple[0] == partner_ip or tuple[1] == partner_ip) and (
-                    tuple[0] in self.get_list_of_host_ip() or tuple[1] in self.get_list_of_host_ip()):
-                communication_host_partnerip_counter += 1
-        percent = communication_host_partnerip_counter / self.get_communication_number_with_host()
-        return percent
 
     # To get a list just of host ips
     def remove_partner_ips(self, list_of_all_ip_addr):
@@ -248,6 +234,17 @@ class Pcap:
                     set_of_partner.add((tuple[0], tuple[1]))
         return len(set_of_partner)
 
+    # returns percent of the communication between host and the partner_ip --> how much connections with the
+    # partner_ip through the whole connections
+    def get_communication_percent(self, partner_ip):
+        communication_host_partnerip_counter = 0
+        for tuple in self.list_of_tuple_src_dst:
+            if (tuple[0] == partner_ip or tuple[1] == partner_ip) and (
+                    tuple[0] in self.get_list_of_host_ip() or tuple[1] in self.get_list_of_host_ip()):
+                communication_host_partnerip_counter += 1
+        percent = communication_host_partnerip_counter / self.get_communication_number_with_host()
+        return percent
+
     # returns a list of tuples --> ip of the partner, how much percent communication with the host
     def get_list_partner_communication_percent(self):
         list_of_partners = self.get_list_of_partners()
@@ -333,8 +330,8 @@ class Pcap:
             else:
                 time_dict[packet[0]] += packet[1]
 
-        times = mlvideos.normalize_times_from_times(self.times)
-        max_second = math.ceil(times[-1])
+        mlvideos.normalize_times_from_times(self.times)
+        max_second = math.ceil(self.times[-1])
         time_dr_dict = {second: 0 for second in range(0, max_second + 1)}
         for key, value in time_dict.items():
             time_dr_dict[key] += value

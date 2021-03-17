@@ -23,7 +23,11 @@ setup(
         "numpy",
         "scipy",
         "pandas",
-        "click"
+        "click",
+        "jinja2",
+        "matplotlib",
+        "dtw-python",
+        "importlib_resources ; python_version<'3.7'",
     ],
     keywords=['pcap', 'network', 'network traffic']
 )

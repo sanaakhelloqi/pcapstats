@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Viz</title>
+        <style>
+            {{ materializecss }}
+        </style>
+    </head>
+    <body class="grey lighten-5">
+        <nav class="indigo darken-4" role="navigation">
+            <div class="nav-wrapper container"><a id="logo-container" href="#" class="brand-logo center">pcapstats - Visualization</a>
+            </div>
+        </nav>
+        <div class="container">
+            <div>
+                <h3 class="center">Metrics</h3>
+                <div class="row">
+                    <div class="input-field col s4">
+                        <select id="files">
+                            <option value="" disabled selected>Choose a file pair</option>
+                        </select>
+                        <label>File selector</label>
+                    </div>
+                    <div class="input-field col s4">
+                        <select id="metrics">
+                            <option value="" disabled selected>Choose a metric</option>
+                        </select>
+                        <label>Metric selector</label>
+                    </div>
+                    <div class="input-field col s4">
+                        <select id="features">
+                            <option value="" disabled selected>Choose a feature</option>
+                          </select>
+                        <label>Feature selector</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div id="chartContainer"></div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            {{ materializejs }}
+        </script>
+        <script>
+            {{ canvasjs }}
+        </script>
+        <script>
+            {{dicts}}
+        </script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // Populate Dropdowns
+                let selected_file = null;
+                let selected_metric = null;
+                let selected_feature = null;
+
+                const files_dropdown = document.getElementById("files");
+                const metrics_dropdown = document.getElementById("metrics");
+                const features_dropdown = document.getElementById("features");
+
+                let file_pairs = new Set();
+                let metrics = new Set();
+                let features = new Set();
+
+                for (let [file, file_content] of Object.entries(dicts)) {
+                    file_pairs.add(file);
+
+                    for  (let [metric, metric_content] of Object.entries(file_content)) {
+                        metrics.add(metric);
+
+                        for (let [feature, feature_content] of Object.entries(metric_content)){
+                            features.add(feature);
+                        }
+                    }
+                }
+
+                for (let file of file_pairs){
+                    files_dropdown.options[files_dropdown.options.length] = new Option(file, file);
+                }
+                for (let metric of metrics){
+                    metrics_dropdown.options[metrics_dropdown.options.length] = new Option(metric, metric);
+                }
+                for (let feature of features){
+                    features_dropdown.options[features_dropdown.options.length] = new Option(feature, feature);
+                }
+
+
+                let elems = document.querySelectorAll('select');
+                let instances = M.FormSelect.init(elems);
+
+                // Setup graph
+                let chart = new CanvasJS.Chart("chartContainer", {
+                    animationEnabled: true,
+                    exportEnabled: true,
+                    zoomEnabled: true,
+                    backgroundColor: "#fafafa",
+                    axisX: {
+                        title: ""
+                    },
+                    axisY: {
+                        title: "",
+                        includeZero: true
+                    },
+                        data: [{
+                            type: "line",
+                            name: "Original",
+                            connectNullData: true,
+                            nullDataLineDashType: "solid",
+                            dataPoints: []
+                        },
+                        {
+                            type: "line",
+                            name: "Target",
+                            connectNullData: true,
+                            nullDataLineDashType: "solid",
+                            dataPoints: []
+                        }]
+                });
+                chart.render();
+
+                files_dropdown.addEventListener("change", function() {
+                    collect_selected_values();
+
+                    if (selected_file && selected_metric && selected_feature){
+                        update_graph();
+                    }
+                });
+
+                metrics_dropdown.addEventListener("change", function() {
+                    collect_selected_values();
+
+                    if (selected_file && selected_metric && selected_feature){
+                        update_graph();
+                    }
+                });
+
+                features_dropdown.addEventListener("change", function() {
+                    collect_selected_values();
+
+                    if (selected_file && selected_metric && selected_feature){
+                        update_graph();
+                    }
+                });
+
+                function collect_selected_values(){
+                    selected_file = files_dropdown.value;
+                    selected_metric = metrics_dropdown.value;
+                    selected_feature = features_dropdown.value;
+                }
+
+                function update_graph(){
+                    let series = build_series(dicts[selected_file][selected_metric][selected_feature]);
+                    let _xaxis = dicts[selected_file][selected_metric][selected_feature]["xaxis"];
+                    let _yaxis = dicts[selected_file][selected_metric][selected_feature]["yaxis"];
+
+                    (new CanvasJS.Chart("chartContainer", {
+                        animationEnabled: true,
+                        zoomEnabled: true,
+                        exportEnabled: true,
+                        backgroundColor: "#fafafa",
+                        axisX: {
+                            title: _xaxis
+                        },
+                        axisY: {
+                            title: _yaxis,
+                            includeZero: true
+                        },
+
+                        data: [{
+                            type: "line",
+                            showInLegend: true,
+                            name: "Original",
+                            connectNullData: true,
+                            nullDataLineDashType: "solid",
+                            dataPoints: series[0]
+                        },
+                        {
+                            type: "line",
+                            showInLegend: true,
+                            name: "Target",
+                            connectNullData: true,
+                            nullDataLineDashType: "solid",
+                            dataPoints: series[1]
+                        }],
+                        legend: {
+                            cursor: "pointer",
+                            itemclick: function (e) {
+                                e.dataSeries.visible = !(typeof (e.dataSeries.visible) === "undefined" || e.dataSeries.visible);
+                                e.chart.render();
+                            }
+                        }
+                    })).render();
+                }
+
+                function build_series(data){
+                    let x = data["x"]
+                    let y1 = data["y1"]
+                    let y2 = data["y2"]
+
+                    let series1 = [];
+                    let series2 = [];
+
+                    for (let i = 0; i < y1.length; i++){
+                        series1.push({"x": x[i], "y": y1[i]})
+                    }
+
+                    for (let i = 0; i < y2.length; i++){
+                        series2.push({"x": x[i], "y": y2[i]})
+                    }
+
+                    return [series1, series2]
+                }
+
+            });
+        </script>
+    </body>
+</html>

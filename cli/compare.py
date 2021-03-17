@@ -14,7 +14,7 @@ from scapy.error import Scapy_Exception
 @click.argument("targets", nargs=-1)
 @click.option("-o", "--output", type=str, default="result.json")
 @click.option("-v", "--visualize", is_flag=True)
-@click.option("-vo", "--visualize-output", type=str, default="result.pdf")
+@click.option("-vo", "--visualize-output", type=str, default="result.html")
 def compare(original, targets, output, visualize, visualize_output):
     comparison_df_list = []
     viz_dict = {}
@@ -55,18 +55,16 @@ def compare(original, targets, output, visualize, visualize_output):
         click.echo("No results generated.")
 
     if visualize:
-        with open("listofdf.pkl", "wb") as f:
-            pickle.dump(viz_dict, f)
         if not viz_dict:
             click.echo("Empty List.")
         else:
-            viz(viz_dict, 'hello_world.html')
+            viz(viz_dict, 'visualization.html')
 
 
 def compare_process(queue, comparator):
-    comp_df, viz = comparator.get_comparisons()
+    comp_df, viz_ = comparator.get_comparisons()
     queue.put(comp_df)
-    queue.put(viz)
+    queue.put(viz_)
 
 
 if __name__ == "__main__":
