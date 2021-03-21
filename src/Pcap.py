@@ -9,6 +9,7 @@ from decimal import Decimal
 from typing import List
 from scapy.all import rdpcap
 from scipy import stats
+import networkx as nx
 
 
 class Pcap:
@@ -146,7 +147,6 @@ class Pcap:
                     list_of_all_ip_addr.remove(ip)
                     break
 
-    # To get the host if we have just 2 ips (1 host, 1 partner)
     def get_host_ip(self, list_of_all_ip_addr):
         count_0 = 0
         count_1 = 0
@@ -163,12 +163,12 @@ class Pcap:
 
     # removes partner ip addresses from the list of all ip addr --> returns the list of host ip
     def get_list_of_host_ip(self):
-        list_of_all_ip_addr = list(self.set_of_all_ip_addr)
+        list_of_all_ip_addr = list(self.set_of_all_ip_addr).copy()
         if len(list_of_all_ip_addr) > 2:
             self.remove_partner_ips(list_of_all_ip_addr)
         else:
             list_of_all_ip_addr.clear()
-            list_of_all_ip_addr.append(self.get_host_ip(list_of_all_ip_addr))
+            list_of_all_ip_addr.append(self.get_host_ip(list(self.set_of_all_ip_addr)))
         return list_of_all_ip_addr
 
     # returns a list of all ip addrs
@@ -182,7 +182,7 @@ class Pcap:
     # returns a list of ip partners
     def get_list_of_partners(self):
         set_of_partner = set()
-        list_of_all_ip_addr = list(self.set_of_all_ip_addr)
+        list_of_all_ip_addr = list(self.set_of_all_ip_addr).copy()
         if len(list_of_all_ip_addr) > 2:
             self.remove_partner_ips(list_of_all_ip_addr)
             for tuple in self.list_of_tuple_src_dst:
@@ -199,10 +199,13 @@ class Pcap:
                     set_of_partner.add(tuple[1])
         return list(set_of_partner)
 
+    def get_partner_number(self):
+        return len(self.get_list_of_partners())
+
     # returns how much connections with the host
     def get_communication_number_with_host(self):
         counter = 0
-        list_of_all_ip_addr = list(self.set_of_all_ip_addr)
+        list_of_all_ip_addr = list(self.set_of_all_ip_addr).copy()
         if len(list_of_all_ip_addr) > 2:
             self.remove_partner_ips(list_of_all_ip_addr)
             host_list = list_of_all_ip_addr
@@ -217,33 +220,17 @@ class Pcap:
                     counter += 1
         return counter
 
-    # returns how much partner with the host
-    def get_partner_number_to_host(self):
-        set_of_partner = set()
-        list_of_all_ip_addr = list(self.set_of_all_ip_addr)
-        if len(list_of_all_ip_addr) > 2:
-            self.remove_partner_ips(list_of_all_ip_addr)
-            src_list = list_of_all_ip_addr
-            for i in rdpcap(str(self.file)):
-                if i.src in src_list:
-                    set_of_partner.add((i.src, i.dst))
-        else:
-            host_ip = self.get_host_ip(list_of_all_ip_addr)
-            for tuple in self.list_of_tuple_src_dst:
-                if tuple[0] == host_ip:
-                    set_of_partner.add((tuple[0], tuple[1]))
-        return len(set_of_partner)
-
     # returns percent of the communication between host and the partner_ip --> how much connections with the
     # partner_ip through the whole connections
     def get_communication_percent(self, partner_ip):
         communication_host_partnerip_counter = 0
+
         for tuple in self.list_of_tuple_src_dst:
             if (tuple[0] == partner_ip or tuple[1] == partner_ip) and (
                     tuple[0] in self.get_list_of_host_ip() or tuple[1] in self.get_list_of_host_ip()):
                 communication_host_partnerip_counter += 1
         percent = communication_host_partnerip_counter / self.get_communication_number_with_host()
-        return percent
+        return communication_host_partnerip_counter
 
     # returns a list of tuples --> ip of the partner, how much percent communication with the host
     def get_list_partner_communication_percent(self):
@@ -252,6 +239,13 @@ class Pcap:
         for i in list_of_partners:
             list_of_tuple_ip_communication_percent.append((i, self.get_communication_percent(i)))
         return list_of_tuple_ip_communication_percent
+
+    def get_ips_graph(self):
+        g = nx.Graph()
+        list_of_all_ip_addr = list(self.set_of_all_ip_addr).copy()
+        for i in self.get_list_partner_communication_percent():
+            g.add_edge(self.get_host_ip(list_of_all_ip_addr), i[0], weight=i[1])
+        return g
 
     # returns dictionary: Keys = seconds and values= packets count
     def get_packets_count_by_second(self):
@@ -269,7 +263,7 @@ class Pcap:
 
     def get_download_rate_by_second(self):
         download_length = 0
-        list_of_all_ip_addr = list(self.set_of_all_ip_addr)
+        list_of_all_ip_addr = list(self.set_of_all_ip_addr).copy()
         if len(list_of_all_ip_addr) > 2:
             self.remove_partner_ips(list_of_all_ip_addr)
             src_list = list_of_all_ip_addr
@@ -287,7 +281,7 @@ class Pcap:
 
     def get_total_length_downloaded(self):
         download_length = 0
-        list_of_all_ip_addr = list(self.set_of_all_ip_addr)
+        list_of_all_ip_addr = list(self.set_of_all_ip_addr).copy()
         if len(list_of_all_ip_addr) > 2:
             self.remove_partner_ips(list_of_all_ip_addr)
             src_list = list_of_all_ip_addr
@@ -305,7 +299,7 @@ class Pcap:
         list_times = []
         list_lengths = []
 
-        list_of_all_ip_addr = list(self.set_of_all_ip_addr)
+        list_of_all_ip_addr = list(self.set_of_all_ip_addr).copy()
         if len(list_of_all_ip_addr) > 2:
             self.remove_partner_ips(list_of_all_ip_addr)
             src_list = list_of_all_ip_addr
@@ -337,99 +331,50 @@ class Pcap:
             time_dr_dict[key] += value
         return time_dr_dict
 
-    def get_total_stall_time_total_playing_time(self, alpha, bitrate):
+    def get_delta_list(self, alpha, bitrate):
         buffer = 0
         dl = True
         play = False
         delta_t_list = []
         delta_t2_list = []
+        count = 0
         time_dr_dict = self.get_time_dr_dict()
         for time, download_rate in time_dr_dict.items():
+            count += 1
             buffer += download_rate / bitrate
             if dl and not play and buffer >= alpha:
                 buffer = max(buffer - 1, 0)
                 play = True
                 dl = True
-                delta_t_list.append(alpha * bitrate / download_rate)
-            #elif play == False and dl == True:
+                delta_t_list.append(count + (alpha * bitrate / download_rate))
+            # elif play == False and dl == True:
             elif buffer == 0 and dl and play:
                 play = False
                 dl = True
-                delta_t2_list.append((alpha * bitrate) / (bitrate - download_rate))
+                delta_t2_list.append(count + ((alpha * bitrate) / (bitrate - download_rate)))
 
             elif play and dl:
                 buffer = max(buffer - 1, 0)
+        return delta_t_list
 
+    def get_total_stall_time(self, alpha, bitrate):
+        delta_t_list = self.get_delta_list(alpha, bitrate)
         total_stall_time = 0
         for time in delta_t_list:
             total_stall_time += time
-
-        total_playing_time = 0
-        for time in delta_t2_list:
-            total_playing_time += time
-
-        return total_stall_time, total_playing_time
+        return total_stall_time
 
     def get_total_stall_count(self, alpha, bitrate):
-        buffer = 0
-        dl = True
-        play = False
-        delta_t_list = []
-        delta_t2_list = []
-        time_dr_dict = self.get_time_dr_dict()
-        for time, download_rate in time_dr_dict.items():
-            buffer += download_rate / bitrate
-            if dl and not play and buffer >= alpha:
-                buffer = max(buffer - 1, 0)
-                play = True
-                dl = True
-                delta_t_list.append(alpha * bitrate / download_rate)
-
-            # elif play == False and dl == True:
-            elif buffer == 0 and dl and play:
-                play = False
-                dl = True
-                delta_t2_list.append((alpha * bitrate) / (bitrate - download_rate))
-
-            elif play and dl:
-                buffer = max(buffer - 1, 0)
-
-        total_stall_time = 0
-        for time in delta_t_list:
-            total_stall_time += time
-
-        stallings_count = len(delta_t_list)
-        return stallings_count
+        delta_t_list = self.get_delta_list(alpha, bitrate)
+        return len(delta_t_list)
 
     def get_initial_delay(self, alpha, bitrate):
-        buffer = 0
-        dl = True
-        play = False
-        delta_t_list = []
-        delta_t2_list = []
-        time_dr_dict = self.get_time_dr_dict()
-        for time, download_rate in time_dr_dict.items():
-            buffer += download_rate / bitrate
-            if dl and not play and buffer >= alpha:
-                buffer = max(buffer - 1, 0)
-                play = True
-                dl = True
-                delta_t_list.append(alpha * bitrate / download_rate)
-
-            # elif play == False and dl == True:
-            elif buffer == 0 and dl and play:
-                play = False
-                dl = True
-                delta_t2_list.append((alpha * bitrate) / (bitrate - download_rate))
-
-            elif play and dl:
-                buffer = max(buffer - 1, 0)
-
+        delta_t_list = self.get_delta_list(alpha, bitrate)
         return delta_t_list[0]
 
     def get_upload_rate_by_second(self):
         upload_length = 0
-        list_of_all_ip_addr = list(self.set_of_all_ip_addr)
+        list_of_all_ip_addr = list(self.set_of_all_ip_addr).copy()
         if len(list_of_all_ip_addr) > 2:
             self.remove_partner_ips(list_of_all_ip_addr)
             src_list = list_of_all_ip_addr
@@ -460,7 +405,7 @@ class Pcap:
     def get_page_load_time(self, pagesize):
         download_length = 0
         page_load_time = []
-        list_of_all_ip_addr = list(self.set_of_all_ip_addr)
+        list_of_all_ip_addr = list(self.set_of_all_ip_addr).copy()
         if len(list_of_all_ip_addr) > 2:
             self.remove_partner_ips(list_of_all_ip_addr)
             src_list = list_of_all_ip_addr

@@ -2,7 +2,7 @@ from src.Pcap import Pcap
 from src.Comparator import Comparator
 from src.visualize import visualize as viz
 
-import pickle
+
 import json
 import multiprocessing
 import click
@@ -44,13 +44,9 @@ def compare(original, targets, output, visualize, visualize_output):
 
     if comparison_df_list:
         click.echo(f"Writing results to {output}")
-        #stats_df = pd.concat(comparison_df_list)
-        #stats_df.to_csv(output, index=False)
-        #stats_df.to_json(r'{}.json'.format(output), index=False, orient='table')
-        jsonString = json.dumps(comparison_df_list)
-        jsonFile = open('{}.json'.format(output), "w")
-        jsonFile.write(jsonString)
-        jsonFile.close()
+
+        with open(f"{output}.json", "w") as comp_json:
+            json.dump(comparison_df_list, comp_json)
     else:
         click.echo("No results generated.")
 
@@ -58,7 +54,7 @@ def compare(original, targets, output, visualize, visualize_output):
         if not viz_dict:
             click.echo("Empty List.")
         else:
-            viz(viz_dict, 'visualization.html')
+            viz(viz_dict, visualize_output)
 
 
 def compare_process(queue, comparator):

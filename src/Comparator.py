@@ -6,6 +6,7 @@ from pathlib import Path
 import numpy as np
 import math
 from libs import dtw
+import networkx as nx
 
 
 class Comparator:
@@ -50,7 +51,12 @@ class Comparator:
             "Chi_squared_test": {},
             "Kolmogorov_smirnov_test": {},
             "Earth_mover_distance": {},
-            "Dynamic_time_warping": {}}
+            "Dynamic_time_warping": {},
+            "Graph_distance": {}}
+
+    def get_graph_distance(self):
+        self.comparisons["Graph_distance"]['graphs'] = nx.graph_edit_distance(self.original.get_ips_graph(),
+                                                                              self.target.get_ips_graph())
 
     def get_data_chi_squared(self, data_list_ori, data_list_aug):
         n = len(data_list_ori)
@@ -69,6 +75,7 @@ class Comparator:
         bins, histogram_original, histogram_augmented = self.get_data_chi_squared(self.original.get_deltas(),
                                                                                   self.target.get_deltas())
         self.comparisons["Chi_squared_test"]['Delta'] = stats.chisquare(histogram_original, histogram_augmented).pvalue
+
         self.viz_data[f"{Path(self.original.file).name},{Path(self.target.file).name}"]["Frequencies"]["deltas"] = \
             {
                 "x": list(bins[:-1]),
@@ -160,15 +167,49 @@ class Comparator:
             }
 
     def get_earth_mover_distance(self):
-        self.comparisons["Earth_mover_distance"]['Delta'] = \
-            stats.wasserstein_distance(self.original.get_deltas(), self.target.get_deltas())
-        self.comparisons["Earth_mover_distance"]['Length'] = \
-            stats.wasserstein_distance(self.original.get_lengths(), self.target.get_lengths())
-        self.comparisons["Earth_mover_distance"]['Packet number by second'] = \
-            stats.wasserstein_distance(self.original.get_packets_count_by_second(),
-                                       self.target.get_packets_count_by_second())
+        original_deltas = self.original.get_deltas().copy()
+        augmented_deltas = self.target.get_deltas().copy()
+        if len(augmented_deltas) > len(original_deltas):
+            for i in augmented_deltas[len(original_deltas):]:
+                original_deltas.append(0)
+        elif len(augmented_deltas) < len(original_deltas):
+            for i in original_deltas[len(augmented_deltas):]:
+                augmented_deltas.append(0)
+        print(len(original_deltas))
+        print(len(augmented_deltas))
 
-    def get_dynamic_time_warping(self, plot=True):
+        self.comparisons["Earth_mover_distance"]['Delta'] = \
+            stats.wasserstein_distance(original_deltas, augmented_deltas)
+
+        original_lengths = self.original.get_lengths().copy()
+        augmented_lengths = self.target.get_lengths().copy()
+        if len(augmented_lengths) > len(original_lengths):
+            for i in augmented_lengths[len(original_lengths):]:
+                original_lengths.append(0)
+        elif len(augmented_lengths) < len(original_lengths):
+            for i in original_lengths[len(augmented_lengths):]:
+                augmented_lengths.append(0)
+        print(len(original_lengths))
+        print(len(augmented_lengths))
+        self.comparisons["Earth_mover_distance"]['Length'] = \
+            stats.wasserstein_distance(original_lengths, augmented_lengths)
+
+        original_packets_number = self.original.get_packets_count_by_second().copy()
+        augmented_packets_number = self.target.get_packets_count_by_second().copy()
+        if len(augmented_packets_number) > len(original_packets_number):
+            for i in augmented_packets_number[len(original_packets_number):]:
+                original_packets_number.append(0)
+        elif len(augmented_packets_number) < len(original_packets_number):
+            for i in original_packets_number[len(augmented_packets_number):]:
+                augmented_packets_number.append(0)
+        print(len(original_packets_number))
+        print(len(augmented_packets_number))
+
+        self.comparisons["Earth_mover_distance"]['Packet number by second'] = \
+            stats.wasserstein_distance(original_packets_number,
+                                       augmented_packets_number)
+
+    def get_dynamic_time_warping(self):
         _dtw = dtw.dtw(self.original.get_deltas(), self.target.get_deltas(), keep_internals=True)
         self.comparisons["Dynamic_time_warping"]['Delta'] = _dtw.distance
 
@@ -180,6 +221,7 @@ class Comparator:
         self.comparisons["Dynamic_time_warping"]['Packet number by second'] = _dtw_packet_second.distance
 
     def collect_comparisons(self):
+        self.get_graph_distance()
         self.get_chi_squared_test()
         self.get_kolmogorov_smirnov_test()
         self.get_earth_mover_distance()
