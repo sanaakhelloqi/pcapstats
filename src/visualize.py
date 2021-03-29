@@ -20,6 +20,9 @@ def visualize(dicts: dict, out: str):
     with pkg_resources.path("resources", "canvasjs.min.js") as canvasjs:
         canvas_js = canvasjs.read_text()
 
+    with open("viz.json", "w") as vizjs:
+        json.dump(dicts, vizjs)
+
     dicts_js = "let dicts = " + json.dumps(dicts)
 
     rendered = template.render(dicts=dicts_js, materializecss=materialize_css, materializejs=materialize_js,

@@ -2,9 +2,8 @@ from src.Pcap import Pcap
 from src.Comparator import Comparator
 from src.visualize import visualize as viz
 
-import pickle
+
 import json
-import multiprocessing
 import click
 from scapy.error import Scapy_Exception
 
@@ -18,8 +17,7 @@ from scapy.error import Scapy_Exception
 def compare(original, targets, output, visualize, visualize_output):
     comparison_df_list = []
     viz_dict = {}
-    queue = multiprocessing.Queue()
-    procesess = []
+
     with click.progressbar(targets) as _targets:
         click.echo("Comparing pcap files...")
         original_pcap = Pcap(original)
@@ -31,26 +29,19 @@ def compare(original, targets, output, visualize, visualize_output):
                 click.echo("Warning: Not a valid pcap file. Skipping...")
                 continue
             comparator = Comparator(original_pcap, target_pcap, visualize)
-            process = multiprocessing.Process(target=compare_process, args=(queue, comparator))
-            procesess.append(process)
-            process.start()
 
-        for _ in procesess:
-            comparison_df_list.append(queue.get())
-            viz_dict = {**viz_dict, **queue.get()}
+            result_dict = comparator.get_comparisons()
 
-        for process in procesess:
-            process.join()
+            comp_dict = result_dict[list(result_dict.keys())[0]]["comparisons"]
+
+            comparison_df_list.append(comp_dict)
+            viz_dict = {**viz_dict, **result_dict}
 
     if comparison_df_list:
         click.echo(f"Writing results to {output}")
-        #stats_df = pd.concat(comparison_df_list)
-        #stats_df.to_csv(output, index=False)
-        #stats_df.to_json(r'{}.json'.format(output), index=False, orient='table')
-        jsonString = json.dumps(comparison_df_list)
-        jsonFile = open('{}.json'.format(output), "w")
-        jsonFile.write(jsonString)
-        jsonFile.close()
+        #print(comparison_df_list)
+        with open(f"{output}.json", "w") as comp_json:
+            json.dump(comparison_df_list, comp_json)
     else:
         click.echo("No results generated.")
 
@@ -58,13 +49,7 @@ def compare(original, targets, output, visualize, visualize_output):
         if not viz_dict:
             click.echo("Empty List.")
         else:
-            viz(viz_dict, 'visualization.html')
-
-
-def compare_process(queue, comparator):
-    comp_df, viz_ = comparator.get_comparisons()
-    queue.put(comp_df)
-    queue.put(viz_)
+            viz(viz_dict, visualize_output)
 
 
 if __name__ == "__main__":
