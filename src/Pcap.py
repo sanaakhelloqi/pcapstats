@@ -254,12 +254,10 @@ class Pcap:
         for i in self.times:
             times_.append(math.floor(i))
         dict_ = dict(collections.Counter(times_))
-        max_second = math.ceil(times_[-1])
-        t_dict = {second: 0 for second in range(0, max_second + 1)}
+        t_dict = {second: 0 for second in range(0, times_[-1] + 1)}
         for key, value in dict_.items():
             t_dict[key] += value
-        list_second_pkt_number = list(t_dict.values())
-        return list_second_pkt_number
+        return t_dict
 
     def get_download_rate_by_second(self):
         download_length = 0
@@ -360,17 +358,25 @@ class Pcap:
     def get_total_stall_time(self, alpha, bitrate):
         delta_t_list = self.get_delta_list(alpha, bitrate)
         total_stall_time = 0
-        for time in delta_t_list:
+        for time in delta_t_list[1:]:
             total_stall_time += time
         return total_stall_time
 
     def get_total_stall_count(self, alpha, bitrate):
         delta_t_list = self.get_delta_list(alpha, bitrate)
-        return len(delta_t_list)
+        if delta_t_list:
+            count = len(delta_t_list) - 1
+        else:
+            count = 0
+        return count
 
     def get_initial_delay(self, alpha, bitrate):
         delta_t_list = self.get_delta_list(alpha, bitrate)
-        return delta_t_list[0]
+        if delta_t_list:
+            initial_delay = delta_t_list[0]
+        else:
+            initial_delay = 0
+        return initial_delay
 
     def get_upload_rate_by_second(self):
         upload_length = 0

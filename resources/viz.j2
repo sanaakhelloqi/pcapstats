@@ -13,7 +13,32 @@
             </div>
         </nav>
         <div class="container">
-            <div>
+            <div class="row card">
+                <h3 class="center">Statistics</h3>
+                <div class=row">
+                     <div class="input-field offset-s4 offset-m4 offset-l4 col s4 m4 l4">
+                        <select id="table-files">
+                            <option value="" disabled selected>Choose a file pair</option>
+                        </select>
+                        <label>File selector</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="offset-s2 offset-m2 offset-l2 col s8 m8 l8">
+                        <table id="stats-table" class="highlight striped" style="display: none">
+                            <thead>
+                                <th>Feature</th>
+                                <th>Original</th>
+                                <th>Target</th>
+                            </thead>
+                            <tbody>
+
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
                 <h3 class="center">Metrics</h3>
                 <div class="row">
                     <div class="input-field col s4">
@@ -53,13 +78,17 @@
         <script>
             document.addEventListener('DOMContentLoaded', function() {
                 // Populate Dropdowns
+                let selected_table_dropdown = null;
+
                 let selected_file = null;
                 let selected_metric = null;
                 let selected_feature = null;
 
+                const table_dropdown = document.getElementById("table-files");
                 const files_dropdown = document.getElementById("files");
                 const metrics_dropdown = document.getElementById("metrics");
                 const features_dropdown = document.getElementById("features");
+
 
                 let file_pairs = new Set();
                 let metrics = new Set();
@@ -68,7 +97,7 @@
                 for (let [file, file_content] of Object.entries(dicts)) {
                     file_pairs.add(file);
 
-                    for  (let [metric, metric_content] of Object.entries(file_content)) {
+                    for  (let [metric, metric_content] of Object.entries(file_content["viz"])) {
                         metrics.add(metric);
 
                         for (let [feature, feature_content] of Object.entries(metric_content)){
@@ -79,6 +108,7 @@
 
                 for (let file of file_pairs){
                     files_dropdown.options[files_dropdown.options.length] = new Option(file, file);
+                    table_dropdown.options[table_dropdown.options.length] = new Option(file, file);
                 }
                 for (let metric of metrics){
                     metrics_dropdown.options[metrics_dropdown.options.length] = new Option(metric, metric);
@@ -146,15 +176,16 @@
                 });
 
                 function collect_selected_values(){
+                    selected_table_dropdown = table_dropdown.value;
                     selected_file = files_dropdown.value;
                     selected_metric = metrics_dropdown.value;
                     selected_feature = features_dropdown.value;
                 }
 
                 function update_graph(){
-                    let series = build_series(dicts[selected_file][selected_metric][selected_feature]);
-                    let _xaxis = dicts[selected_file][selected_metric][selected_feature]["xaxis"];
-                    let _yaxis = dicts[selected_file][selected_metric][selected_feature]["yaxis"];
+                    let series = build_series(dicts[selected_file]["viz"][selected_metric][selected_feature]);
+                    let _xaxis = dicts[selected_file]["viz"][selected_metric][selected_feature]["xaxis"];
+                    let _yaxis = dicts[selected_file]["viz"][selected_metric][selected_feature]["yaxis"];
 
                     (new CanvasJS.Chart("chartContainer", {
                         animationEnabled: true,
@@ -214,6 +245,61 @@
                     return [series1, series2]
                 }
 
+                //DataTable
+                const table = document.getElementById("stats-table");
+
+                table_dropdown.addEventListener("change", function() {
+                    collect_selected_values();
+
+                    if (selected_table_dropdown){
+                        update_tables();
+                    }
+                });
+
+                function update_tables(){
+                    table.style.display = "inline";
+                    table.getElementsByTagName("tbody")[0].innerHTML = "";
+
+                    let stats = dicts[selected_table_dropdown]["comparisons"];
+                    let original_stats = stats["Original"];
+                    let target_stats = stats["Target"];
+
+                    let columns = [];
+                    let original_data = [];
+                    let target_data = [];
+
+                    for (let [feature, value] of Object.entries(original_stats)){
+                        columns.push(feature);
+                        original_data.push(value);
+                    }
+                    for (let [feature, value] of Object.entries(target_stats)){
+                        target_data.push(value);
+                    }
+
+                    columns.forEach(function(value, i){
+                        let feature = document.createElement("b");
+                        let feature_text = document.createTextNode(value);
+                        feature.appendChild(feature_text);
+
+                        let original = document.createTextNode(original_data[i]);
+                        let target = document.createTextNode(target_data[i]);
+
+                        let tr = document.createElement("tr");
+
+                        let feature_td = document.createElement("td");
+                        feature_td.appendChild(feature);
+                        let original_td = document.createElement("td");
+                        original_td.appendChild(original);
+                        let target_td = document.createElement("td");
+                        target_td.appendChild(target);
+
+                        tr.appendChild(feature_td);
+                        tr.appendChild(original_td);
+                        tr.appendChild(target_td);
+
+                        table.getElementsByTagName("tbody")[0].appendChild(tr);
+                    });
+                }
             });
         </script>
     </body>
