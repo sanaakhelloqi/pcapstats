@@ -61,11 +61,11 @@ class Comparator:
             "Kolmogorov_smirnov_test": {},
             "Earth_mover_distance": {},
             "Dynamic_time_warping": {},
-            #"Graph_distance": {},
+            "Graph_distance": {},
         }
-    #def get_graph_distance(self):
-     #   self.comparisons["Graph_distance"]['graphs'] = nx.graph_edit_distance(self.original.get_ips_graph(),
-      #                                                                        self.target.get_ips_graph())
+    def get_graph_distance(self):
+       self.comparisons["Graph_distance"]['graphs'] = nx.graph_edit_distance(self.original.get_ips_graph(),
+                                                                              self.target.get_ips_graph())
 
     def get_data_same_length(self, data_list_ori, data_list_aug):
         n = len(data_list_ori)
@@ -93,7 +93,7 @@ class Comparator:
             self.get_data_same_length(data_list_ori, data_list_aug)
         return bins, histogram_original, histogram_augmented
 
-    def get_data_ks_test(self, data_list_ori, data_list_aug):
+    def get_cdf_data(self, data_list_ori, data_list_aug):
         bins, histogram_original, histogram_augmented, length_org, length_aug =\
             self.get_data_same_length(data_list_ori, data_list_aug)
         return bins, np.cumsum(histogram_original), np.cumsum(histogram_augmented), length_org, length_aug
@@ -151,7 +151,7 @@ class Comparator:
             stats.ks_2samp(list(self.target.get_packets_count_by_second().values()),
                            list(self.original.get_packets_count_by_second().values())).pvalue
 
-        bins, cumulative_original, cumulative_augmented, histmax, hist2max = self.get_data_ks_test(self.original.get_deltas(),
+        bins, cumulative_original, cumulative_augmented, histmax, hist2max = self.get_cdf_data(self.original.get_deltas(),
                                                                                 self.target.get_deltas())
 
         self.viz_data["CDF"]["deltas"] = \
@@ -163,7 +163,7 @@ class Comparator:
                 "yaxis": "Number of packets"
             }
 
-        bins_lengths, hist_lengths, hist2_lengths, histmax, hist2max = self.get_data_ks_test(self.original.get_lengths(),
+        bins_lengths, hist_lengths, hist2_lengths, histmax, hist2max = self.get_cdf_data(self.original.get_lengths(),
                                                                           self.target.get_lengths())
         self.viz_data["CDF"]["lengths"] = \
             {
@@ -173,10 +173,6 @@ class Comparator:
                 "xaxis": "Lengths in bytes",
                 "yaxis": "Number of packets"
             }
-
-        bins_packet_number, hist_packet_number, hist2_packet_number, histmax, hist2max = \
-            self.get_data_ks_test(list(self.original.get_packets_count_by_second().values()),
-                                  list(self.target.get_packets_count_by_second().values()))
 
         values_org = np.array(list(self.original.get_packets_count_by_second().values()))
         values_aug = np.array(list(self.target.get_packets_count_by_second().values()))
@@ -194,127 +190,87 @@ class Comparator:
                 "xaxis": "Time in second",
                 "yaxis": "Packet number"
             }
-    def get_earth_mover_distance(self):
+
+    def get_data_normalized(self, original_data, augmented_data):
+        max_org = max(original_data)
+        min_org = min(original_data)
+        max_aug = max(augmented_data)
+        min_aug = min(augmented_data)
+        for i in range(len(original_data)):
+            if max_org - min_org != 0:
+                original_data[i] = (original_data[i] - min_org) / (max_org - min_org)
+            else:
+                  break
+        for i in range(len(augmented_data)):
+            if max_aug - min_aug != 0:
+                augmented_data[i] = (augmented_data[i] - min_aug) / (max_aug - min_aug)
+            else:
+                 break
+        return original_data, augmented_data
+
+    def get_earth_mover_distance_deltas(self):
         original_deltas = self.original.get_deltas().copy()
         augmented_deltas = self.target.get_deltas().copy()
-        bins, histogram_original, histogram_augmented, length_org, length_aug = \
-            self.get_data_same_length(original_deltas, augmented_deltas)
-        for i in range(len(histogram_original)):
-            if length_org != 0:
-                histogram_original[i] = histogram_original[i] / length_org
-            else:
-                break
-        for i in range(len(histogram_augmented)):
-            if length_org != 0:
-                histogram_augmented[i] = histogram_augmented[i] / length_org
-            else:
-                break
-        self.comparisons["Earth_mover_distance"]['Delta'] = stats.wasserstein_distance(histogram_original,
-                                                                                       histogram_augmented)
+        original_deltas, augmented_deltas = self.get_data_normalized(original_deltas, augmented_deltas)
+        self.comparisons["Earth_mover_distance"]['Delta'] = stats.wasserstein_distance(original_deltas,
+                                                                                       augmented_deltas)
 
+    def get_earth_mover_distance_lengths(self):
         original_lengths = self.original.get_lengths().copy()
         augmented_lengths = self.target.get_lengths().copy()
-        bins, histogram_original, histogram_augmented, length_org, length_aug = \
-            self.get_data_same_length(original_lengths, augmented_lengths)
-        for i in range(len(histogram_original)):
-            if length_org != 0:
-                histogram_original[i] = histogram_original[i] / length_org
-            else:
-                break
+        original_lengths, augmented_lengths = self.get_data_normalized(original_lengths, augmented_lengths)
+        self.comparisons["Earth_mover_distance"]['Length'] = stats.wasserstein_distance(original_lengths,
+                                                                                        augmented_lengths)
 
-        for i in range(len(histogram_augmented)):
-            if length_org != 0:
-                histogram_augmented[i] = histogram_augmented[i] / length_org
-            else:
-                break
-        self.comparisons["Earth_mover_distance"]['Length'] = stats.wasserstein_distance(histogram_original,
-                                                                                        histogram_augmented)
-
+    def get_earth_mover_distance_packets_number(self):
         original_packets_number = list(self.original.get_packets_count_by_second().values()).copy()
         augmented_packets_number = list(self.target.get_packets_count_by_second().values()).copy()
+        if len(original_packets_number) > len(augmented_packets_number):
+            for i in range(len(augmented_packets_number), len(original_packets_number), 1):
+                augmented_packets_number.append(0)
+        original_packets_number, augmented_packets_number = self.get_data_normalized(original_packets_number,
+                                                                                     augmented_packets_number)
+        self.comparisons["Earth_mover_distance"]['Packet number by second'] = \
+            stats.wasserstein_distance(original_packets_number, augmented_packets_number)
 
-        bins, histogram_original, histogram_augmented, length_org, length_aug = \
-            self.get_data_same_length(original_packets_number, augmented_packets_number)
-        for i in range(len(histogram_original)):
-            if length_org != 0:
-                histogram_original[i] = histogram_original[i] / length_org
-            else:
-                break
-
-        for i in range(len(histogram_augmented)):
-            if length_org != 0:
-                histogram_augmented[i] = histogram_augmented[i] / length_org
-            else:
-                break
-        self.comparisons["Earth_mover_distance"]['Packet number by second'] =\
-            stats.wasserstein_distance(histogram_original, histogram_augmented)
-
-    def get_dynamic_time_warping(self):
+    def get_dynamic_time_warping_deltas(self):
         original_deltas = self.original.get_deltas().copy()
         augmented_deltas = self.target.get_deltas().copy()
+        original_deltas, augmented_deltas = self.get_data_normalized(original_deltas, augmented_deltas)
+        self.comparisons["Dynamic_time_warping"]['Delta'] = dtw.distance(original_deltas, augmented_deltas)
 
-        bins, histogram_original, histogram_augmented, length_org, length_aug = \
-            self.get_data_same_length(original_deltas, augmented_deltas)
-        for i in range(len(histogram_original)):
-            if length_org != 0:
-                histogram_original[i] = histogram_original[i] / length_org
-            else:
-                break
-
-        for i in range(len(histogram_augmented)):
-            if length_org != 0:
-                histogram_augmented[i] = histogram_augmented[i] / length_org
-            else:
-                break
-        self.comparisons["Dynamic_time_warping"]['Delta'] = dtw.distance(histogram_original, histogram_augmented)
+    def get_dynamic_time_warping_lengths(self):
         original_lengths = self.original.get_lengths().copy()
         augmented_lengths = self.target.get_lengths().copy()
+        original_lengths, augmented_lengths = self.get_data_normalized(original_lengths, augmented_lengths)
+        self.comparisons["Dynamic_time_warping"]['Length'] = dtw.distance(original_lengths, augmented_lengths)
 
-        bins, histogram_original, histogram_augmented, length_org, length_aug = \
-            self.get_data_same_length(original_lengths, augmented_lengths)
-
-        for i in range(len(histogram_original)):
-            if length_org != 0:
-                histogram_original[i] = histogram_original[i] / length_org
-            else:
-                break
-
-        for i in range(len(histogram_augmented)):
-            if length_org != 0:
-                histogram_augmented[i] = histogram_augmented[i] / length_org
-            else:
-                break
-
-        self.comparisons["Dynamic_time_warping"]['Length'] = dtw.distance(histogram_original, histogram_augmented)
-
+    def get_dynamic_time_warping_packets_number(self):
         original_packets_number = list(self.original.get_packets_count_by_second().values()).copy()
         augmented_packets_number = list(self.target.get_packets_count_by_second().values()).copy()
-
-        bins, histogram_original, histogram_augmented, length_org, length_aug = \
-            self.get_data_same_length(original_packets_number, augmented_packets_number)
-        for i in range(len(histogram_original)):
-            if length_org != 0:
-                histogram_original[i] = histogram_original[i] / length_org
-            else:
-                break
-
-        for i in range(len(histogram_augmented)):
-            if length_org != 0:
-                histogram_augmented[i] = histogram_augmented[i] / length_org
-            else:
-                break
+        if len(original_packets_number) > len(augmented_packets_number):
+            for i in range(len(augmented_packets_number), len(original_packets_number), 1):
+                augmented_packets_number.append(0)
+        original_packets_number, augmented_packets_number = self.get_data_normalized(original_packets_number,
+                                                                                     augmented_packets_number)
         self.comparisons["Dynamic_time_warping"]['Packet number by second'] = \
-            dtw.distance(histogram_original, histogram_augmented)
+            dtw.distance(original_packets_number, augmented_packets_number)
 
     def collect_comparisons(self):
-        #self.get_graph_distance()
+        self.get_graph_distance()
         self.get_chi_squared_test()
         self.get_kolmogorov_smirnov_test()
-        self.get_earth_mover_distance()
-        self.get_dynamic_time_warping()
+
+        self.get_earth_mover_distance_deltas()
+        self.get_earth_mover_distance_lengths()
+        self.get_earth_mover_distance_packets_number()
+
+        self.get_dynamic_time_warping_deltas()
+        self.get_dynamic_time_warping_lengths()
+        self.get_dynamic_time_warping_packets_number()
 
     def get_comparisons(self):
         self.collect_comparisons()
         return {f"{Path(self.original.file).name},{Path(self.target.file).name}": {"comparisons": self.comparisons,
                                                                                    "viz": self.viz_data},
-                                                                                   }
+                                                                                   "graphs": self.viz_graphs}
