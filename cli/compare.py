@@ -31,15 +31,12 @@ def compare(original, targets, output, visualize, visualize_output):
             comparator = Comparator(original_pcap, target_pcap, visualize)
 
             result_dict = comparator.get_comparisons()
-
             comp_dict = result_dict[list(result_dict.keys())[0]]["comparisons"]
-
             comparison_df_list.append(comp_dict)
             viz_dict = {**viz_dict, **result_dict}
 
     if comparison_df_list:
         click.echo(f"Writing results to {output}")
-        #print(comparison_df_list)
         with open(f"{output}.json", "w") as comp_json:
             json.dump(comparison_df_list, comp_json)
     else:

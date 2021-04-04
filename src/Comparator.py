@@ -63,17 +63,18 @@ class Comparator:
             "Dynamic_time_warping": {},
             "Graph_distance": {},
         }
+
     def get_graph_distance(self):
        self.comparisons["Graph_distance"]['graphs'] = nx.graph_edit_distance(self.original.get_ips_graph(),
                                                                               self.target.get_ips_graph())
 
     def get_data_same_length(self, data_list_ori, data_list_aug):
         n = len(data_list_ori)
-        if n < 35:
+        if n < 30:
             out, bins = pd.qcut(data_list_ori, n,
                                 labels=False, retbins=True, duplicates='drop')
         else:
-            out, bins = pd.qcut(data_list_ori, math.floor(1.88 * n ** (2 / 5)),
+            out, bins = pd.qcut(data_list_ori, math.ceil(math.log2(n))+1,
                                     labels=False, retbins=True, duplicates='drop')
         histogram_original, bin_edges = np.histogram(data_list_ori, bins, range=None, normed=None,
                                                      weights=None, density=None)
@@ -200,12 +201,12 @@ class Comparator:
             if max_org - min_org != 0:
                 original_data[i] = (original_data[i] - min_org) / (max_org - min_org)
             else:
-                  break
+                original_data[i] = 1 / len(original_data)
         for i in range(len(augmented_data)):
             if max_aug - min_aug != 0:
                 augmented_data[i] = (augmented_data[i] - min_aug) / (max_aug - min_aug)
             else:
-                 break
+                augmented_data[i] = 1 / len(augmented_data)
         return original_data, augmented_data
 
     def get_earth_mover_distance_deltas(self):
@@ -225,9 +226,6 @@ class Comparator:
     def get_earth_mover_distance_packets_number(self):
         original_packets_number = list(self.original.get_packets_count_by_second().values()).copy()
         augmented_packets_number = list(self.target.get_packets_count_by_second().values()).copy()
-        if len(original_packets_number) > len(augmented_packets_number):
-            for i in range(len(augmented_packets_number), len(original_packets_number), 1):
-                augmented_packets_number.append(0)
         original_packets_number, augmented_packets_number = self.get_data_normalized(original_packets_number,
                                                                                      augmented_packets_number)
         self.comparisons["Earth_mover_distance"]['Packet number by second'] = \
@@ -248,9 +246,6 @@ class Comparator:
     def get_dynamic_time_warping_packets_number(self):
         original_packets_number = list(self.original.get_packets_count_by_second().values()).copy()
         augmented_packets_number = list(self.target.get_packets_count_by_second().values()).copy()
-        if len(original_packets_number) > len(augmented_packets_number):
-            for i in range(len(augmented_packets_number), len(original_packets_number), 1):
-                augmented_packets_number.append(0)
         original_packets_number, augmented_packets_number = self.get_data_normalized(original_packets_number,
                                                                                      augmented_packets_number)
         self.comparisons["Dynamic_time_warping"]['Packet number by second'] = \

@@ -15,7 +15,10 @@ import networkx as nx
 class Pcap:
     def __init__(self, file: Path):
         self.file = file
-        self.stats = {"pcap": str(file)}
+        self.stats = {"pcap": f"{Path(file).name}",
+                      "Deltas": {},
+                      "Lengths": {},
+                      "arrival_times": {}}
         self.deltas = None
         self.times = self.get_times()
         self.lengths = self.get_lengths()
@@ -57,87 +60,155 @@ class Pcap:
             self.calc_deltas()
         return self.deltas
 
-    def get_count(self):
+    def get_deltas_count(self):
         if not self.deltas:
             self.calc_deltas()
         else:
-            self.stats["count"] = pd.Series(self.deltas).count()
+            self.stats["Deltas"]["count"] = float(pd.Series(self.deltas).count())
 
-    def get_mean(self):
+    def get_deltas_mean(self):
         if not self.deltas:
             self.calc_deltas()
         else:
-            self.stats["mean"] = pd.Series(self.deltas).mean()
+            self.stats["Deltas"]["mean"] = float(pd.Series(self.deltas).mean())
 
-    def get_std(self):
+    def get_deltas_std(self):
         if not self.deltas:
             self.calc_deltas()
         else:
-            self.stats["std"] = pd.Series(self.deltas).std()
+            self.stats["Deltas"]["std"] = float(pd.Series(self.deltas).std())
 
-    def get_min(self):
+    def get_deltas_min(self):
         if not self.deltas:
             self.calc_deltas()
         else:
-            self.stats["min"] = pd.Series(self.deltas).min()
+            self.stats["Deltas"]["min"] = float(pd.Series(self.deltas).min())
 
-    def get_max(self):
+    def get_deltas_max(self):
         if not self.deltas:
             self.calc_deltas()
         else:
-            self.stats["max"] = pd.Series(self.deltas).max()
+            self.stats["Deltas"]["max"] = float(pd.Series(self.deltas).max())
 
-    def get_variance(self):
+    def get_deltas_variance(self):
         if not self.deltas:
             self.calc_deltas()
         else:
-            self.stats["variance"] = np.var(self.deltas)
+            self.stats["Deltas"]["variance"] = float(np.var(self.deltas))
 
-    def get_variance_coefficient(self):
+    def get_deltas_variance_coefficient(self):
         if not self.deltas:
             self.calc_deltas()
         else:
-            self.stats["variance_coefficient"] = np.std(self.deltas) / np.mean(self.deltas)
+            self.stats["Deltas"]["variance_coefficient"] = float(np.std(self.deltas) / np.mean(self.deltas))
 
-    def get_mode(self):
+    def get_deltas_mode(self):
         if not self.deltas:
             self.calc_deltas()
         else:
-            self.stats["mode"] = stats.mode(self.deltas)[0]
+            self.stats["Deltas"]["mode"] = float(stats.mode(self.deltas)[0])
 
-    def get_kurtosis(self):
+    def get_deltas_kurtosis(self):
         if not self.deltas:
             self.calc_deltas()
         else:
-            self.stats["kurtosis"] = stats.mstats.kurtosis(self.deltas)
+            self.stats["Deltas"]["kurtosis"] = float(stats.mstats.kurtosis(self.deltas))
 
-    def get_skewness(self):
+    def get_deltas_skewness(self):
         if not self.deltas:
             self.calc_deltas()
         else:
-            self.stats["skewness"] = stats.skew(self.deltas)
+            self.stats["Deltas"]["skewness"] = float(stats.skew(self.deltas))
 
-    def get_median(self):
+    def get_deltas_median(self):
         if not self.deltas:
             self.calc_deltas()
         else:
-            self.stats["median"] = np.median(self.deltas)
+            self.stats["Deltas"]["median"] = float(np.median(self.deltas))
+    ####################################################################################
+
+    def get_lengths_count(self):
+        self.stats["Lengths"]["count"] = float(pd.Series(self.lengths).count())
+
+    def get_lengths_mean(self):
+        self.stats["Lengths"]["mean"] = float(pd.Series(self.lengths).mean())
+
+    def get_lengths_std(self):
+        self.stats["Lengths"]["std"] = float(pd.Series(self.lengths).std())
+
+    def get_lengths_min(self):
+        self.stats["Lengths"]["min"] = float(pd.Series(self.lengths).min())
+
+    def get_lengths_max(self):
+        self.stats["Lengths"]["max"] = float(pd.Series(self.lengths).max())
+
+    def get_lengths_variance(self):
+        self.stats["Lengths"]["variance"] = float(np.var(self.lengths))
+
+    def get_lengths_variance_coefficient(self):
+        self.stats["Lengths"]["variance_coefficient"] = float(np.std(self.lengths) / np.mean(self.lengths))
+
+    def get_lengths_mode(self):
+        self.stats["Lengths"]["mode"] = float(stats.mode(self.lengths)[0])
+
+    def get_lengths_kurtosis(self):
+        self.stats["Lengths"]["kurtosis"] = float(stats.mstats.kurtosis(self.lengths))
+
+    def get_lengths_skewness(self):
+        self.stats["Lengths"]["skewness"] = float(stats.skew(self.lengths))
+
+    def get_lengths_median(self):
+        self.stats["Lengths"]["median"] = float(np.median(self.lengths))
+    ##############################################################################################
+
+    def get_times_min(self):
+        mlvideos.normalize_times_from_times(self.times)
+        self.stats["arrival_times"]["min"] = float(pd.Series(self.times).min())
+
+    def get_times_max(self):
+        mlvideos.normalize_times_from_times(self.times)
+        self.stats["arrival_times"]["max"] = float(pd.Series(self.times).max())
+
+    def get_times_median(self):
+        mlvideos.normalize_times_from_times(self.times)
+        self.stats["arrival_times"]["median"] = float(np.median(self.times))
+    ##########################################################################################
 
     def collect_stats(self):
-        self.get_mean()
-        self.get_std()
-        self.get_min()
-        self.get_max()
-        self.get_variance()
-        self.get_variance_coefficient()
-        self.get_mode()
-        self.get_kurtosis()
-        self.get_skewness()
-        self.get_median()
+        #deltas
+        self.get_deltas_count()
+        self.get_deltas_mean()
+        self.get_deltas_std()
+        self.get_deltas_min()
+        self.get_deltas_max()
+        self.get_deltas_variance()
+        self.get_deltas_variance_coefficient()
+        self.get_deltas_mode()
+        self.get_deltas_kurtosis()
+        self.get_deltas_skewness()
+        self.get_deltas_median()
+        #lengths
+        self.get_lengths_count()
+        self.get_lengths_mean()
+        self.get_lengths_std()
+        self.get_lengths_min()
+        self.get_lengths_max()
+        self.get_lengths_variance()
+        self.get_lengths_variance_coefficient()
+        self.get_lengths_mode()
+        self.get_lengths_kurtosis()
+        self.get_lengths_skewness()
+        self.get_lengths_median()
+
+        #arrival times
+
+        self.get_times_min()
+        self.get_times_max()
+        self.get_times_median()
 
     def get_stats(self):
         self.collect_stats()
-        return pd.DataFrame.from_dict(self.stats)
+        return self.stats
 
     # To get a list just of host ips
     def remove_partner_ips(self, list_of_all_ip_addr):

@@ -2,7 +2,6 @@ from src.Pcap import Pcap
 import json
 import click
 from scapy.error import Scapy_Exception
-import pandas as pd
 
 
 @click.command()
@@ -21,13 +20,12 @@ def stats(files, output):
                 click.echo("Warning: Not a pcap file. Skipping...")
                 continue
 
-    click.echo(f"Writing results to {output}")
-    jsonString = json.dumps(stats_df_list)
-    jsonFile = open('{}.json'.format(output), "w")
-    jsonFile.write(jsonString)
-    jsonFile.close()
-    #stats_df = pd.concat(stats_df_list)
-    #stats_df.to_csv(output, index=False)
+    if stats_df_list:
+        click.echo(f"Writing results to {output}")
+        with open(f"{output}.json", "w") as comp_json:
+            json.dump(stats_df_list, comp_json)
+    else:
+        click.echo("No results generated.")
 
 
 if __name__ == "__main__":

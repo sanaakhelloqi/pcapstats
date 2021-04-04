@@ -26,8 +26,9 @@ setup(
         "click",
         "jinja2",
         "matplotlib",
-        "dtw-python",
+        "dtaidistance",
         "importlib_resources ; python_version<'3.7'",
+        "networkx"
     ],
     keywords=['pcap', 'network', 'network traffic']
 )
