@@ -11,22 +11,25 @@ def visualize(dicts: dict, out: str):
     with pkg_resources.path('resources', "viz.j2") as file_:
         template = Template(file_.read_text())
 
-    with pkg_resources.path("resources", "materialize.min.css") as matcss:
-        materialize_css = matcss.read_text()
+    with pkg_resources.path("resources", "vis.min.css") as viscss:
+        vis_css = viscss.read_text()
 
-    with pkg_resources.path("resources", "materialize.min.js") as matjs:
-        materialize_js = matjs.read_text()
+    with pkg_resources.path("resources", "vis.min.js") as visjs:
+        vis_js = visjs.read_text()
+
+    with pkg_resources.path("resources", "app.css") as appcss:
+        app_css = appcss.read_text()
+
+    with pkg_resources.path("resources", "app.js") as appjs:
+        app_js = appjs.read_text()
 
     with pkg_resources.path("resources", "canvasjs.min.js") as canvasjs:
         canvas_js = canvasjs.read_text()
 
-    with open("viz.json", "w") as vizjs:
-        json.dump(dicts, vizjs)
-
     dicts_js = "let dicts = " + json.dumps(dicts)
 
-    rendered = template.render(dicts=dicts_js, materializecss=materialize_css, materializejs=materialize_js,
-                          canvasjs=canvas_js)
+    rendered = template.render(json_data=dicts_js, viscss=vis_css, visjs=vis_js, appcss=app_css, appjs=app_js,
+                               canvasjs=canvas_js)
 
     with open(out, "w") as fh:
         fh.write(rendered)

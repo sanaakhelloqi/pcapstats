@@ -1,306 +1,900 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <title>Viz</title>
-        <style>
-            {{ materializecss }}
-        </style>
-    </head>
-    <body class="grey lighten-5">
-        <nav class="indigo darken-4" role="navigation">
-            <div class="nav-wrapper container"><a id="logo-container" href="#" class="brand-logo center">pcapstats - Visualization</a>
-            </div>
-        </nav>
-        <div class="container">
-            <div class="row card">
-                <h3 class="center">Statistics</h3>
-                <div class=row">
-                     <div class="input-field offset-s4 offset-m4 offset-l4 col s4 m4 l4">
-                        <select id="table-files">
-                            <option value="" disabled selected>Choose a file pair</option>
-                        </select>
-                        <label>File selector</label>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="offset-s2 offset-m2 offset-l2 col s8 m8 l8">
-                        <table id="stats-table" class="highlight striped" style="display: none">
-                            <thead>
-                                <th>Feature</th>
-                                <th>Original</th>
-                                <th>Target</th>
-                            </thead>
-                            <tbody>
 
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            <div class="row">
-                <h3 class="center">Metrics</h3>
-                <div class="row">
-                    <div class="input-field col s4">
-                        <select id="files">
-                            <option value="" disabled selected>Choose a file pair</option>
-                        </select>
-                        <label>File selector</label>
-                    </div>
-                    <div class="input-field col s4">
-                        <select id="metrics">
-                            <option value="" disabled selected>Choose a metric</option>
-                        </select>
-                        <label>Metric selector</label>
-                    </div>
-                    <div class="input-field col s4">
-                        <select id="features">
-                            <option value="" disabled selected>Choose a feature</option>
-                          </select>
-                        <label>Feature selector</label>
-                    </div>
-                </div>
-                <div class="row">
-                    <div id="chartContainer"></div>
-                </div>
-            </div>
-        </div>
+<head>
+	<meta charset="utf-8">
+	<link rel="preconnect" href="https://fonts.gstatic.com">
+	<link rel="shortcut icon" href="img/icons/icon-48x48.png" />
 
-        <script>
-            {{ materializejs }}
-        </script>
-        <script>
-            {{ canvasjs }}
-        </script>
-        <script>
-            {{dicts}}
-        </script>
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                // Populate Dropdowns
-                let selected_table_dropdown = null;
+	<title>pcapstats – Visualization</title>
 
-                let selected_file = null;
-                let selected_metric = null;
-                let selected_feature = null;
+	<style>{{appcss}}</style>
+	<style>{{viscss}}</style>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+	<style>
+		#original_network {
+			display: block;
+			margin-left: auto;
+			margin-right: auto;
+			width: 100%;
+			height: 600px;
+		}
 
-                const table_dropdown = document.getElementById("table-files");
-                const files_dropdown = document.getElementById("files");
-                const metrics_dropdown = document.getElementById("metrics");
-                const features_dropdown = document.getElementById("features");
+		#target_network {
+			display: block;
+			margin-left: auto;
+			margin-right: auto;
+			width: 100%;
+			height: 600px;
+		}
+	</style>
+</head>
+
+<body>
+	<div class="wrapper">
+		<nav id="sidebar" class="sidebar">
+			<div class="sidebar-content js-simplebar">
+				<a class="sidebar-brand" href="index.html">
+					<span class="align-middle">pcapstats</span>
+				</a>
+
+				<ul class="sidebar-nav">
+					<li class="sidebar-header">
+						Pages
+					</li>
+					<li class="sidebar-item active" id="list-item-dashboard">
+						<a class="sidebar-link" href="javascript:switchContent('dashboard')">
+							<i class="align-middle" data-feather="box"></i> <span class="align-middle">Dashboard</span>
+						</a>
+					</li>
+					<li class="sidebar-item" id="list-item-charts">
+						<a class="sidebar-link" href="javascript:switchContent('charts')">
+							<i class="align-middle" data-feather="pie-chart"></i> <span
+								class="align-middle">Charts</span>
+						</a>
+					</li>
+					<li class="sidebar-item" id="list-item-graphs">
+						<a class="sidebar-link" href="javascript:switchContent('graphs')">
+							<i class="align-middle" data-feather="git-merge"></i> <span
+								class="align-middle">Graphs</span>
+						</a>
+					</li>
+				</ul>
+			</div>
+		</nav>
+
+		<div class="main">
+			<nav class="navbar navbar-expand navbar-light navbar-bg">
+				<a class="sidebar-toggle d-flex">
+					<i class="hamburger align-self-center"></i>
+				</a>
+			</nav>
+
+			<main class="content">
+				<!---------------------- Dashboard content -------------------------->
+				<div class="container-fluid p-0" id="dashboard-content">
+
+					<div class="row mb-2 mb-xl-3">
+						<div class="col-auto d-none d-sm-block">
+							<h3><strong>pcapstats</strong> Visualization</h3>
+						</div>
+						<div class="col-auto ms-auto text-end mt-n1">
+							<nav aria-label="breadcrumb">
+								<ol class="breadcrumb bg-transparent p-0 mt-1 mb-0">
+									<li class="breadcrumb-item"><a
+											href="javascript:switchContent('dashboard')">pagetools</a></li>
+									<li class="breadcrumb-item"><a
+											href="javascript:switchContent('dashboard')">Visualization</a></li>
+									<li class="breadcrumb-item active" aria-current="page">Dashboard</li>
+								</ol>
+							</nav>
+						</div>
+					</div>
+
+					<div class="row">
+						<div class="col-4">
+							<div class="card">
+								<div class="card-body">
+									<h5 class="card-title mb-4">pcap files</h5>
+									<h1 class="mt-1 mb-3" id="pcap-file-count"></h1>
+								</div>
+							</div>
+						</div>
+						<div class="col-4">
+							<div class="card">
+								<div class="card-body">
+									<h5 class="card-title mb-4">Metrics</h5>
+									<h1 class="mt-1 mb-3">4</h1>
+								</div>
+							</div>
+						</div>
+						<div class="col-4">
+							<div class="card">
+								<div class="card-body">
+									<h5 class="card-title mb-4">Features</h5>
+									<h1 class="mt-1 mb-3">12</h1>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<div class="row">
+						<div class="col-md-6 offset-md-3">
+							<h1>Similarity measures</h1>
+							<div class="card container-fuid">
+								<div class="card-header">
+									<select id="dashboard-similarity-table-selector" class="form-select">
+										<option value="" selected hidden>Choose a file pair</option>
+									</select>
+								</div>
+								<div class="card-body">
+									<div class="alert alert-primary alert-dismissible" role="alert">
+										<button type="button" id="similarity-chart-alert" class="btn-close"
+											data-bs-dismiss="alert" aria-label="Close"></button>
+										<div class="alert-message">
+											<strong>No file pair selected!!</strong> Select a file pair to display
+											features
+										</div>
+									</div>
+									<div class="d-flex justify-content-center">
+										<div class="table-responsive" style="display: none">
+											<table id="similarity-table" class="table table-hover table-striped">
+												<thead>
+													<th>Metric</th>
+													<th>Delta</th>
+													<th>Length</th>
+													<th>Packet number by second</th>
+												</thead>
+												<tbody>
+												</tbody>
+											</table>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<div class="row">
+						<div class="col-6">
+							<h1>Features</h1>
+							<div class="card container-fluid">
+								<div class="card-header">
+									<div class="col-sm-12 col-md-12 col-lg-12">
+										<select id="dashboard-primary-table-selector" class="form-select">
+											<option value="" selected hidden>Choose a file pair</option>
+										</select>
+									</div>
+								</div>
+								<div class="card-body">
+									<div class="alert alert-primary alert-dismissible" role="alert">
+										<button type="button" id="primary-table-alert" class="btn-close"
+											data-bs-dismiss="alert" aria-label="Close"></button>
+										<div class="alert-message">
+											<strong>No file pair selected!!</strong> Select a file pair to display
+											features
+										</div>
+									</div>
+									<div class="d-flex justify-content-center">
+									<div class="table-responsive" style="display: none">
+										<table id="feature-table" class="table table-hover table-striped">
+											<thead>
+												<th>Feature</th>
+												<th>Original</th>
+												<th>Target</th>
+											</thead>
+											<tbody>
+											</tbody>
+										</table>
+									</div>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="col-6">
+							<h1>Statistics</h1>
+							<div class="card container-fluid">
+								<div class="card-header">
+									<div class="row">
+										<div class="col-sm-6">
+											<select id="dashboard-secondary-table-selector" class="form-select">
+												<option value="" selected hidden>Choose a file pair</option>
+											</select>
+										</div>
+										<div class="col-sm-6">
+											<select id="dashboard-secondary-table-feature-selector" class="form-select">
+												<option value="" selected hidden>Choose a feature</option>
+											</select>
+										</div>
+									</div>
+								</div>
+								<div class="card-body">
+									<div class="alert alert-primary alert-dismissible" role="alert">
+										<button type="button" id="secondary-table-alert" class="btn-close"
+											data-bs-dismiss="alert" aria-label="Close"></button>
+										<div class="alert-message">
+											<strong>No file pair and / or feature selected!!</strong> Select a file pair
+											and feature to display
+											statistics
+										</div>
+									</div>
+									<div class="d-flex justify-content-center">
+									<div class="table-responsive" style="display: none;">
+										<table id="stats-table" class="table table-hover table-striped">
+											<thead>
+												<th>Statistic</th>
+												<th>Original</th>
+												<th>Target</th>
+											</thead>
+											<tbody>
+											</tbody>
+										</table>
+									</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<!---------------------- Chart content -------------------------->
+				<div class="container-fluid p-0" id="charts-content" style="display: none;">
+					<div class="row mb-2 mb-xl-3">
+						<div class="col-auto d-none d-sm-block">
+							<h3><strong>pcapstats</strong> Visualization</h3>
+						</div>
+						<div class="col-auto ms-auto text-end mt-n1">
+							<nav aria-label="breadcrumb">
+								<ol class="breadcrumb bg-transparent p-0 mt-1 mb-0">
+									<li class="breadcrumb-item"><a
+											href="javascript:switchContent('dashboard')">pagetools</a></li>
+									<li class="breadcrumb-item"><a
+											href="javascript:switchContent('dashboard')">Visualization</a></li>
+									<li class="breadcrumb-item active" aria-current="page">Charts</li>
+								</ol>
+							</nav>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-4">
+							<div class="card">
+								<div class="card-body">
+									<h5 class="card-title mb-4">File selector</h5>
+									<select id="chart-file-selector" class="form-select "
+										aria-label="Default select example">
+										<option value="" selected hidden>Choose a file pair</option>
+									</select>
+								</div>
+							</div>
+						</div>
+						<div class="col-4">
+							<div class="card">
+								<div class="card-body">
+									<h5 class="card-title mb-4">Metric selector</h5>
+									<select id="chart-metric-selector" class="form-select"
+										aria-label="Default select example">
+										<option value="" selected hidden>Choose a metric</option>
+									</select>
+								</div>
+							</div>
+						</div>
+						<div class="col-4">
+							<div class="card">
+								<div class="card-body">
+									<h5 class="card-title mb-4">Feature selector</h5>
+									<select id="chart-feature-selector" class="form-select"
+										aria-label="Default select example">
+										<option value="" selected hidden>Choose a feature</option>
+									</select>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="row">
+						<div class="card flex-fill w-100">
+							<div class="card-body">
+								<div class="alert alert-primary alert-dismissible" role="alert">
+									<button type="button" id="graph-alert" class="btn-close" data-bs-dismiss="alert"
+										aria-label="Close"></button>
+									<div class="alert-message">
+										<strong>Not all options selected!</strong> Select all options to display a graph
+									</div>
+								</div>
+								<div class="chart">
+									<div id="chartContainer" style="height: 300px; width: 100%"></div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<!---------------------- Graph content -------------------------->
+				<div class="container-fluid p-0" id="graphs-content" style="display: none;">
+					<div class="row mb-2 mb-xl-3">
+						<div class="col-auto d-none d-sm-block">
+							<h3><strong>pcapstats</strong> Visualization</h3>
+						</div>
+						<div class="col-auto ms-auto text-end mt-n1">
+							<nav aria-label="breadcrumb">
+								<ol class="breadcrumb bg-transparent p-0 mt-1 mb-0">
+									<li class="breadcrumb-item"><a
+											href="javascript:switchContent('dashboard')">pagetools</a></li>
+									<li class="breadcrumb-item"><a
+											href="javascript:switchContent('dashboard')">Visualization</a></li>
+									<li class="breadcrumb-item active" aria-current="page">Graphs</li>
+								</ol>
+							</nav>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-5">
+							<div class="card">
+								<div class="card-header">
+									Original
+								</div>
+								<div id="original_network">
+									<div class="alert alert-primary alert-dismissible col-6 mx-auto" role="alert">
+										<button type="button" id="primary-graph-alert" class="btn-close"
+											data-bs-dismiss="alert" aria-label="Close"></button>
+										<div class="alert-message">
+											<strong>No file pair selected!!</strong> Select a file pair to display
+											network graphs
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="col-2">
+							<div class="card">
+								<div class="card-body">
+									<div class="row">
+										<select id="graph-file-selector" class="form-select">
+											<option value="" selected hidden>Choose a file pair</option>
+										</select>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="col-5">
+							<div class="card">
+								<div class="card-header">
+									Target
+								</div>
+								<div id="target_network">
+									<div class="alert alert-primary alert-dismissible col-6 mx-auto" role="alert">
+										<button type="button" id="secondary-graph-alert" class="btn-close"
+											data-bs-dismiss="alert" aria-label="Close"></button>
+										<div class="alert-message">
+											<strong>No file pair selected!!</strong> Select a file pair to display
+											network graphs
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</main>
+
+			<footer class="footer">
+				<div class="container-fluid">
+					<div class="row text-muted">
+						<div class="col-6 text-start">
+							<p class="mb-0">
+								<a href="https://github.com/sanaakhelloqi/pcapstats"
+									class="text-muted"><strong>pcapstats</strong></a>
+							</p>
+						</div>
+					</div>
+				</div>
+			</footer>
+		</div>
+	</div>
+	<script>{{appjs}}</script>
+	<script>{{canvasjs}}</script>
+	<script>{{visjs}}</script>
+	<script>
+		function switchContent(content) {
+			const listItemDashboard = document.getElementById("list-item-dashboard");
+			const listItemCharts = document.getElementById("list-item-charts");
+			const listItemGraphs = document.getElementById("list-item-graphs");
+
+			const dashboardContent = document.getElementById("dashboard-content");
+			const chartsContent = document.getElementById("charts-content");
+			const graphsContent = document.getElementById("graphs-content");
+
+			function setListItemsInactive() {
+				listItemDashboard.classList.remove("active");
+				listItemCharts.classList.remove("active");
+				listItemGraphs.classList.remove("active");
+			}
+
+			switch (content) {
+				case "dashboard":
+					dashboardContent.style.display = "block";
+					chartsContent.style.display = "none";
+					graphsContent.style.display = "none";
+
+					setListItemsInactive();
+					listItemDashboard.classList.add("active");
+					break;
+				case "charts":
+					dashboardContent.style.display = "none";
+					chartsContent.style.display = "block";
+					graphsContent.style.display = "none";
+
+					setListItemsInactive();
+					listItemCharts.classList.add("active");
+					break;
+				case "graphs":
+					dashboardContent.style.display = "none";
+					chartsContent.style.display = "none";
+					graphsContent.style.display = "block";
+
+					setListItemsInactive();
+					listItemGraphs.classList.add("active");
+					break;
+			}
+		}
+	</script>
+	<script>
+		{{json_data}}
+	</script>
+	<script>
+		document.addEventListener('DOMContentLoaded', function () {
+			let pcapFileCount = document.getElementById("pcap-file-count");
+
+			// Populate Dropdowns
+			let selected_similarity_file_dropdown = null;
+			let selected_feature_table_file_dropdown = null;
+			let selected_stats_table_file_dropdown = null;
+			let selected_stats_table_feature_dropdown = null;
+
+			let selected_graph_file_dropdown = null;
+
+			let selected_file = null;
+			let selected_metric = null;
+			let selected_feature = null;
+
+			const similarity_table_file_dropdown = document.getElementById("dashboard-similarity-table-selector");
+			const feature_table_file_dropdown = document.getElementById("dashboard-primary-table-selector");
+			const stats_table_file_dropdown = document.getElementById("dashboard-secondary-table-selector");
+			const stats_table_feature_dropdown = document.getElementById("dashboard-secondary-table-feature-selector");
+			const graph_file_dropdown = document.getElementById("graph-file-selector");
+
+			const files_dropdown = document.getElementById("chart-file-selector");
+			const metrics_dropdown = document.getElementById("chart-metric-selector");
+			const features_dropdown = document.getElementById("chart-feature-selector");
 
 
-                let file_pairs = new Set();
-                let metrics = new Set();
-                let features = new Set();
+			let file_pairs = new Set();
 
-                for (let [file, file_content] of Object.entries(dicts)) {
-                    file_pairs.add(file);
+			let chart_metrics = new Set();
+			let chart_features = new Set();
 
-                    for  (let [metric, metric_content] of Object.entries(file_content["viz"])) {
-                        metrics.add(metric);
+			let stats_features = new Set();
 
-                        for (let [feature, feature_content] of Object.entries(metric_content)){
-                            features.add(feature);
-                        }
-                    }
-                }
+			for (let [file_pair, file_content] of Object.entries(dicts["comparisons"])) {
+				file_pairs.add(file_pair);
 
-                for (let file of file_pairs){
-                    files_dropdown.options[files_dropdown.options.length] = new Option(file, file);
-                    table_dropdown.options[table_dropdown.options.length] = new Option(file, file);
-                }
-                for (let metric of metrics){
-                    metrics_dropdown.options[metrics_dropdown.options.length] = new Option(metric, metric);
-                }
-                for (let feature of features){
-                    features_dropdown.options[features_dropdown.options.length] = new Option(feature, feature);
-                }
+				for (let [metric, metric_content] of Object.entries(file_content["visualization_data"])) {
+					chart_metrics.add(metric);
+
+					for (let [feature, feature_content] of Object.entries(metric_content)) {
+						chart_features.add(feature);
+					}
+				}
+			}
+
+			for (let [file, file_content] of Object.entries(dicts["stats"])) {
+				for (let [feature, feature_content] of Object.entries(file_content)) {
+                    stats_features.add(feature);
+				}
+			}
 
 
-                let elems = document.querySelectorAll('select');
-                let instances = M.FormSelect.init(elems);
+			pcapFileCount.textContent = file_pairs.size;
 
-                // Setup graph
-                let chart = new CanvasJS.Chart("chartContainer", {
-                    animationEnabled: true,
-                    exportEnabled: true,
-                    zoomEnabled: true,
-                    backgroundColor: "#fafafa",
-                    axisX: {
-                        title: ""
-                    },
-                    axisY: {
-                        title: "",
-                        includeZero: true
-                    },
-                        data: [{
-                            type: "line",
-                            name: "Original",
-                            connectNullData: true,
-                            nullDataLineDashType: "solid",
-                            dataPoints: []
-                        },
-                        {
-                            type: "line",
-                            name: "Target",
-                            connectNullData: true,
-                            nullDataLineDashType: "solid",
-                            dataPoints: []
-                        }]
-                });
-                chart.render();
+			for (let file of file_pairs) {
+				similarity_table_file_dropdown.options[similarity_table_file_dropdown.options.length] = new Option(file, file);
+				files_dropdown.options[files_dropdown.options.length] = new Option(file, file);
+				feature_table_file_dropdown.options[feature_table_file_dropdown.options.length] = new Option(file, file);
+				stats_table_file_dropdown.options[stats_table_file_dropdown.options.length] = new Option(file, file);
+				graph_file_dropdown.options[graph_file_dropdown.options.length] = new Option(file, file);
+			}
+			for (let metric of chart_metrics) {
+				metrics_dropdown.options[metrics_dropdown.options.length] = new Option(metric, metric);
+			}
+			for (let feature of chart_features) {
+				features_dropdown.options[features_dropdown.options.length] = new Option(feature, feature);
+			}
+			for (let feature of stats_features) {
+				stats_table_feature_dropdown.options[stats_table_feature_dropdown.options.length] = new Option(feature, feature);
+			}
 
-                files_dropdown.addEventListener("change", function() {
-                    collect_selected_values();
+			files_dropdown.addEventListener("change", function () {
+				collect_selected_values();
 
-                    if (selected_file && selected_metric && selected_feature){
-                        update_graph();
-                    }
-                });
+				if (selected_file && selected_metric && selected_feature) {
+					update_chart();
+				}
+			});
 
-                metrics_dropdown.addEventListener("change", function() {
-                    collect_selected_values();
+			metrics_dropdown.addEventListener("change", function () {
+				collect_selected_values();
 
-                    if (selected_file && selected_metric && selected_feature){
-                        update_graph();
-                    }
-                });
+				if (selected_file && selected_metric && selected_feature) {
+					update_chart();
+				}
+			});
 
-                features_dropdown.addEventListener("change", function() {
-                    collect_selected_values();
+			features_dropdown.addEventListener("change", function () {
+				collect_selected_values();
 
-                    if (selected_file && selected_metric && selected_feature){
-                        update_graph();
-                    }
-                });
+				if (selected_file && selected_metric && selected_feature) {
+					update_chart();
+				}
+			});
 
-                function collect_selected_values(){
-                    selected_table_dropdown = table_dropdown.value;
-                    selected_file = files_dropdown.value;
-                    selected_metric = metrics_dropdown.value;
-                    selected_feature = features_dropdown.value;
-                }
+			graph_file_dropdown.addEventListener("change", function () {
+				collect_selected_values();
+			});
 
-                function update_graph(){
-                    let series = build_series(dicts[selected_file]["viz"][selected_metric][selected_feature]);
-                    let _xaxis = dicts[selected_file]["viz"][selected_metric][selected_feature]["xaxis"];
-                    let _yaxis = dicts[selected_file]["viz"][selected_metric][selected_feature]["yaxis"];
+			function collect_selected_values() {
+				selected_similarity_file_dropdown = similarity_table_file_dropdown.value;
+				selected_feature_table_file_dropdown = feature_table_file_dropdown.value;
+				selected_stats_table_file_dropdown = stats_table_file_dropdown.value;
+				selected_stats_table_feature_dropdown = stats_table_feature_dropdown.value;
+				selected_graph_file_dropdown = graph_file_dropdown.value;
 
-                    (new CanvasJS.Chart("chartContainer", {
-                        animationEnabled: true,
-                        zoomEnabled: true,
-                        exportEnabled: true,
-                        backgroundColor: "#fafafa",
-                        axisX: {
-                            title: _xaxis
-                        },
-                        axisY: {
-                            title: _yaxis,
-                            includeZero: true
-                        },
+				selected_file = files_dropdown.value;
+				selected_metric = metrics_dropdown.value;
+				selected_feature = features_dropdown.value;
+			}
 
-                        data: [{
-                            type: "line",
-                            showInLegend: true,
-                            name: "Original",
-                            connectNullData: true,
-                            nullDataLineDashType: "solid",
-                            dataPoints: series[0]
-                        },
-                        {
-                            type: "line",
-                            showInLegend: true,
-                            name: "Target",
-                            connectNullData: true,
-                            nullDataLineDashType: "solid",
-                            dataPoints: series[1]
-                        }],
-                        legend: {
-                            cursor: "pointer",
-                            itemclick: function (e) {
-                                e.dataSeries.visible = !(typeof (e.dataSeries.visible) === "undefined" || e.dataSeries.visible);
-                                e.chart.render();
-                            }
-                        }
-                    })).render();
-                }
+			function update_chart() {
+				let graph_alert = document.getElementById("graph-alert")
+				if (graph_alert)
+					graph_alert.click();
 
-                function build_series(data){
-                    let x = data["x"]
-                    let y1 = data["y1"]
-                    let y2 = data["y2"]
+				let series = build_series(dicts["comparisons"][selected_file]["visualization_data"][selected_metric][selected_feature]);
+				let _xaxis = dicts["comparisons"][selected_file]["visualization_data"][selected_metric][selected_feature]["xaxis"];
+				let _yaxis = dicts["comparisons"][selected_file]["visualization_data"][selected_metric][selected_feature]["yaxis"];
 
-                    let series1 = [];
-                    let series2 = [];
+				(new CanvasJS.Chart("chartContainer", {
+					animationEnabled: true,
+					zoomEnabled: true,
+					exportEnabled: true,
+					backgroundColor: "#FFFFFF",
+					axisX: {
+						title: _xaxis
+					},
+					axisY: {
+						title: _yaxis,
+						includeZero: true
+					},
 
-                    for (let i = 0; i < y1.length; i++){
-                        series1.push({"x": x[i], "y": y1[i]})
-                    }
+					data: [{
+						type: "line",
+						showInLegend: true,
+						name: "Original",
+						connectNullData: true,
+						nullDataLineDashType: "solid",
+						dataPoints: series[0]
+					},
+					{
+						type: "line",
+						showInLegend: true,
+						name: "Target",
+						connectNullData: true,
+						nullDataLineDashType: "solid",
+						dataPoints: series[1]
+					}],
+					legend: {
+						cursor: "pointer",
+						itemclick: function (e) {
+							e.dataSeries.visible = !(typeof (e.dataSeries.visible) === "undefined" || e.dataSeries.visible);
+							e.chart.render();
+						}
+					}
+				})).render();
+			}
 
-                    for (let i = 0; i < y2.length; i++){
-                        series2.push({"x": x[i], "y": y2[i]})
-                    }
+			function build_series(data) {
+				let x = data["x"]
+				let y1 = data["y1"]
+				let y2 = data["y2"]
 
-                    return [series1, series2]
-                }
+				let series1 = [];
+				let series2 = [];
 
-                //DataTable
-                const table = document.getElementById("stats-table");
+				for (let i = 0; i < y1.length; i++) {
+					series1.push({ "x": x[i], "y": y1[i] })
+				}
 
-                table_dropdown.addEventListener("change", function() {
-                    collect_selected_values();
+				for (let i = 0; i < y2.length; i++) {
+					series2.push({ "x": x[i], "y": y2[i] })
+				}
 
-                    if (selected_table_dropdown){
-                        update_tables();
-                    }
-                });
+				return [series1, series2]
+			}
 
-                function update_tables(){
-                    table.style.display = "inline";
-                    table.getElementsByTagName("tbody")[0].innerHTML = "";
+			//DataTable
+			const similarity_table =  document.getElementById("similarity-table");
 
-                    let stats = dicts[selected_table_dropdown]["comparisons"];
-                    let original_stats = stats["Original"];
-                    let target_stats = stats["Target"];
+			similarity_table_file_dropdown.addEventListener("change", function () {
+				collect_selected_values();
 
-                    let columns = [];
-                    let original_data = [];
-                    let target_data = [];
+				if (selected_similarity_file_dropdown) {
+					let similarity_table_alert = document.getElementById("similarity-chart-alert")
+					if (similarity_table_alert)
+						similarity_table_alert.click();
+					similarity_table.parentElement.style.display = "block";
+					update_similarity_table(similarity_table, selected_similarity_file_dropdown);
+				}
+			});
 
-                    for (let [feature, value] of Object.entries(original_stats)){
-                        columns.push(feature);
-                        original_data.push(value);
-                    }
-                    for (let [feature, value] of Object.entries(target_stats)){
-                        target_data.push(value);
-                    }
+			const featureTable = document.getElementById("feature-table");
+			const statsTable = document.getElementById("stats-table");
 
-                    columns.forEach(function(value, i){
-                        let feature = document.createElement("b");
-                        let feature_text = document.createTextNode(value);
-                        feature.appendChild(feature_text);
+			feature_table_file_dropdown.addEventListener("change", function () {
+				collect_selected_values();
 
-                        let original = document.createTextNode(original_data[i]);
-                        let target = document.createTextNode(target_data[i]);
+				if (selected_feature_table_file_dropdown) {
+					let primary_table_alert = document.getElementById("primary-table-alert")
+					if (primary_table_alert)
+						primary_table_alert.click();
+					featureTable.parentElement.style.display = "block";
+					update_feature_table(featureTable, selected_feature_table_file_dropdown);
+				}
+			});
 
-                        let tr = document.createElement("tr");
+			stats_table_file_dropdown.addEventListener("change", function () {
+				collect_selected_values();
 
-                        let feature_td = document.createElement("td");
-                        feature_td.appendChild(feature);
-                        let original_td = document.createElement("td");
-                        original_td.appendChild(original);
-                        let target_td = document.createElement("td");
-                        target_td.appendChild(target);
+				if (selected_stats_table_file_dropdown && selected_stats_table_feature_dropdown) {
+					let secondary_table_alert = document.getElementById("secondary-table-alert")
+					if (secondary_table_alert)
+						secondary_table_alert.click();
+					statsTable.parentElement.style.display = "block";
+					update_stats_table(statsTable, selected_stats_table_file_dropdown, selected_stats_table_feature_dropdown);
+				}
+			});
 
-                        tr.appendChild(feature_td);
-                        tr.appendChild(original_td);
-                        tr.appendChild(target_td);
+			stats_table_feature_dropdown.addEventListener("change", function () {
+				collect_selected_values();
 
-                        table.getElementsByTagName("tbody")[0].appendChild(tr);
-                    });
-                }
-            });
-        </script>
-    </body>
+				if (selected_stats_table_file_dropdown && selected_stats_table_feature_dropdown) {
+					let secondary_table_alert = document.getElementById("secondary-table-alert")
+					if (secondary_table_alert)
+						secondary_table_alert.click();
+					statsTable.parentElement.style.display = "block";
+					update_stats_table(statsTable, selected_stats_table_file_dropdown, selected_stats_table_feature_dropdown);
+				}
+			});
+
+			function update_similarity_table(table, file_pair) {
+				table.style.display = "inline";
+				table.getElementsByTagName("tbody")[0].innerHTML = "";
+
+				let original_stats = dicts["comparisons"][file_pair]["metrics"];
+
+				let data = [];
+
+				for (let [metric, metric_value] of Object.entries(original_stats)) {
+					if(metric === "Graph_distance"){
+						continue;
+					}
+					row = [];
+					row.push(metric);
+					for(let[feature, value] of Object.entries(metric_value)){
+						row.push(value);
+					}
+					data.push(row);
+				}
+
+				data.forEach(function (value, i) {
+					tds = [];
+
+					value.forEach(function(_val, j){
+						let text_node;
+						if(j === 0){
+							_val = _val.replaceAll("_", " ");
+							text_node = document.createElement("b");
+							let _text = document.createTextNode(_val);
+							text_node.append(_text);
+						}else{
+							text_node = document.createTextNode(_val);
+						}
+
+						let td = document.createElement("td");
+						td.appendChild(text_node);
+
+						tds.push(td);
+					})
+					
+					let tr = document.createElement("tr");
+					
+					tds.forEach(function(_td, _i){
+						tr.appendChild(_td);
+					})
+
+					table.getElementsByTagName("tbody")[0].appendChild(tr);
+				}); 
+
+			}
+
+			function update_feature_table(table, dropdown) {
+				table.style.display = "inline";
+				table.getElementsByTagName("tbody")[0].innerHTML = "";
+
+				let original_file = dropdown.split(",")[0]
+				let target_file = dropdown.split(",")[1]
+
+				let original_stats = dicts["features"][original_file];
+				let target_stats = dicts["features"][target_file];
+
+				let columns = [];
+				let original_data = [];
+				let target_data = [];
+
+				for (let [feature, value] of Object.entries(original_stats)) {
+					columns.push(feature);
+					original_data.push(value);
+				}
+				for (let [feature, value] of Object.entries(target_stats)) {
+					target_data.push(value);
+				}
+
+				columns.forEach(function (value, i) {
+					let feature = document.createElement("b");
+					let feature_text = document.createTextNode(value);
+					feature.appendChild(feature_text);
+
+					let original = document.createTextNode(original_data[i]);
+					let target = document.createTextNode(target_data[i]);
+
+					let tr = document.createElement("tr");
+
+					let feature_td = document.createElement("td");
+					feature_td.appendChild(feature);
+					let original_td = document.createElement("td");
+					original_td.appendChild(original);
+					let target_td = document.createElement("td");
+					target_td.appendChild(target);
+
+
+					tr.appendChild(feature_td);
+					tr.appendChild(original_td);
+					tr.appendChild(target_td);
+
+					table.getElementsByTagName("tbody")[0].appendChild(tr);
+				});
+			}
+
+			function update_stats_table(table, file, feature) {
+				table.style.display = "inline";
+				table.getElementsByTagName("tbody")[0].innerHTML = "";
+
+				original_file = file.split(",")[0]
+				target_file = file.split(",")[1]
+
+				let original_stats = dicts["stats"][original_file][feature];
+				let target_stats = dicts["stats"][target_file][feature];
+
+				let columns = [];
+				let original_data = [];
+				let target_data = [];
+
+				for (let [feature, value] of Object.entries(original_stats)) {
+					columns.push(feature);
+					original_data.push(value);
+				}
+				for (let [feature, value] of Object.entries(target_stats)) {
+					target_data.push(value);
+				}
+
+				columns.forEach(function (value, i) {
+					let feature = document.createElement("b");
+					let feature_text = document.createTextNode(value);
+					feature.appendChild(feature_text);
+
+					let original = document.createTextNode(original_data[i]);
+					let target = document.createTextNode(target_data[i]);
+
+					let tr = document.createElement("tr");
+
+					let feature_td = document.createElement("td");
+					feature_td.appendChild(feature);
+					let original_td = document.createElement("td");
+					original_td.appendChild(original);
+					let target_td = document.createElement("td");
+					target_td.appendChild(target);
+
+
+					tr.appendChild(feature_td);
+					tr.appendChild(original_td);
+					tr.appendChild(target_td);
+
+					table.getElementsByTagName("tbody")[0].appendChild(tr);
+				});
+			}
+
+			///////////// End Chart
+			graph_file_dropdown.addEventListener("change", function () {
+				collect_selected_values();
+
+				if (selected_graph_file_dropdown) {
+					update_graphs(selected_graph_file_dropdown);
+				}
+
+			});
+
+
+			///////////// Begin Graph 1
+			function update_graphs(file_pair) {
+				original_file = file_pair.split(",")[0]
+				target_file = file_pair.split(",")[1]
+
+				let primary_nodes = [];
+				let primary_edges = [];
+
+				for(let [node, value] of Object.entries(dicts["graphs"][original_file]["nodes"])){
+						primary_nodes.push({"id": value.id, "value": 1, label: value.id})
+				};
+				for(let [link, value] of Object.entries(dicts["graphs"][original_file]["links"])){
+					primary_edges.push({"from": value.source, "to": value.target, title: `${value.weight} connections`, arrows: { enabled: true, to: true }})
+				};
+
+				var container = document.getElementById("original_network");
+				var data = {
+					nodes: primary_nodes,
+					edges: primary_edges,
+				};
+				var options = {
+					autoResize: true,
+					height: '100%',
+					width: '100%',
+				};
+				var primary_network = new vis.Network(container, data, options);
+				primary_network.once("beforeDrawing", function () {
+					primary_network.focus(2, {
+						scale: 1.5,
+					});
+				});
+
+
+				let secondary_nodes = [];
+				let secondary_edges = [];
+
+				for(let [node, value] of Object.entries(dicts["graphs"][target_file]["nodes"])){
+					secondary_nodes.push({"id": value.id, "value": 1, label: value.id})
+				};
+				for(let [link, value] of Object.entries(dicts["graphs"][target_file]["links"])){
+					secondary_edges.push({"from": value.source, "to": value.target, title: `${value.weight} connections`, arrows: { enabled: true, to: true }})
+				};
+
+
+				// create a network
+				var container = document.getElementById("target_network");
+				var data = {
+					nodes: secondary_nodes,
+					edges: secondary_edges,
+				};
+				var options = {
+					autoResize: true,
+					height: '100%',
+					width: '100%',
+				};
+				var secondary_network = new vis.Network(container, data, options);
+				secondary_network.once("beforeDrawing", function () {
+					secondary_network.focus(2, {
+						scale: 1.5,
+					});
+				});
+
+			}
+
+		});
+	</script>
+</body>
+
 </html>

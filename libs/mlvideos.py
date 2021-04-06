@@ -6,13 +6,13 @@ from contextlib import contextmanager
 import random
 from typing import List, Sequence, Iterator, MutableSequence
 from decimal import Decimal
-from scapy.all import Packet
+from src.datamodel.Packet import Packet
 import bisect
 import numpy as np
 
 
 class PacketTimeWrapper(MutableSequence[Decimal]):
-    def __init__(self, packets: Sequence[Packet]):
+    def __init__(self, packets: List[Packet]):
         self.packets = packets
 
     def __len__(self) -> int:
@@ -107,8 +107,6 @@ def sliding_time_window(packetlist: Sequence[Packet], winsize_seconds: Decimal):
     times = np.array([ i.time for i in packetlist ])
 
     for i, packet_time in enumerate(times):
-        # winstart = seek(packetlist, packet.time - winsize_seconds)
-        # winstop = seek_right(packetlist, packet.time + winsize_seconds)
         winstart = bisect.bisect_left(times, packet_time - winsize_seconds)
         winstop = bisect.bisect_right(times, packet_time + winsize_seconds)
         window = packetlist[winstart:winstop]
