@@ -30,55 +30,14 @@ class Comparator:
             self.target_filename: json_graph.node_link_data(self.target.get_ip_graph())
         }
 
-        self.features = {
-            self.original_filename: {"Number of packets": self.original.get_packets_count(),
-                                     "Download rate in kbit/s": float(self.original.get_download_rate_by_second()),
-                                     "Upload rate in kbit/s": float(self.original.get_upload_rate_by_second()),
-                                     "Length of all packets in kbit": float(self.original.get_total_length()),
-                                     "Total download length in kbit": float(
-                                         self.original.get_total_length_downloaded()),
-                                     "Total Stall time": float(self.original.get_total_stall_time(5, 8000)),
-                                     "Total Stall number": float(self.original.get_total_stall_count(5, 8000)),
-                                     "Initial delay": float(self.original.get_initial_delay(5, 8000)),
-                                     "Page load time in second for the total downloaded size":
-                                         float(self.original.get_page_load_time_total()),
-                                     "Page load time for the half of the downloaded size":
-                                         float(self.original.get_page_load_time_half()),
-                                     "Page load time for the quarter of the downloaded size": float(
-                                         self.original.get_page_load_time_quarter()),
-                                     "Page load time for the three quarters of the downloaded size": float(
-                                         self.original.get_page_load_time_three_quarters())
-                                     },
-            self.target_filename: {"Number of packets": self.target.get_packets_count(),
-                                   "Download rate in kbit/s": float(self.target.get_download_rate_by_second()),
-                                   "Upload rate in kbit/s": float(self.target.get_upload_rate_by_second()),
-                                   "Length of all packets in kbit": float(self.target.get_total_length()),
-                                   "Total download length in kbit": float(self.target.get_total_length_downloaded()),
-                                   "Total Stall time": float(self.target.get_total_stall_time(5, 8000)),
-                                   "Total Stall number": float(self.target.get_total_stall_count(5, 8000)),
-                                   "Initial delay": float(self.target.get_initial_delay(5, 8000)),
-                                   "Page load time in second for the total downloaded size": float(
-                                       self.target.get_page_load_time_total()),
-                                   "Page load time for the half of the downloaded size": float(
-                                       self.target.get_page_load_time_half()),
-                                   "Page load time for the quarter of downloaded size": float(
-                                       self.target.get_page_load_time_quarter()),
-                                   "Page load time for the three quarters of the downloaded size": float(
-                                       self.target.get_page_load_time_three_quarters())
-                                   }
-        }
+        self.features = {}
 
         self.comparisons = {
             "Chi_squared_test": {},
             "Kolmogorov_smirnov_test": {},
             "Earth_mover_distance": {},
             "Dynamic_time_warping": {},
-            #"Graph_distance": {},
         }
-
-    #def get_graph_distance(self):
-     #   self.comparisons["Graph_distance"]['graphs'] = nx.graph_edit_distance(self.original.get_ip_graph(),
-      #                                                                        self.target.get_ip_graph())
 
     def get_data_same_length(self, data_list_ori, data_list_aug):
         n = len(data_list_ori)
@@ -157,7 +116,7 @@ class Comparator:
 
     def get_kolmogorov_smirnov_test(self):
         self.comparisons["Kolmogorov_smirnov_test"]["Delta"] = stats.ks_2samp(self.target.get_deltas(),
-                                                                               self.original.get_deltas()).pvalue
+                                                                              self.original.get_deltas()).pvalue
         self.comparisons["Kolmogorov_smirnov_test"]["Length"] = stats.ks_2samp(self.target.get_lengths(),
                                                                                self.original.get_lengths()).pvalue
         self.comparisons["Kolmogorov_smirnov_test"]['Packet number by second'] = \
@@ -264,8 +223,8 @@ class Comparator:
         self.comparisons["Dynamic_time_warping"]['Packet number by second'] = \
             dtw.distance(original_packets_number, augmented_packets_number)
 
-    def calculate(self):
-        #self.get_graph_distance()
+    def calculate_metrics(self):
+        # self.get_graph_distance()
         self.get_chi_squared_test()
         self.get_kolmogorov_smirnov_test()
 
@@ -280,7 +239,54 @@ class Comparator:
     def get_features(self):
         return self.features
 
-    def get_comparisons(self):
+    def calc_features(self):
+        self.features = {self.original_filename: {"Number of packets": self.original.get_packets_count(),
+                                                  "Download rate in kbit/s": float(
+                                                      self.original.get_download_rate_by_second()),
+                                                  "Upload rate in kbit/s": float(
+                                                      self.original.get_upload_rate_by_second()),
+                                                  "Length of all packets in kbit": float(
+                                                      self.original.get_total_length()),
+                                                  "Total download length in kbit": float(
+                                                      self.original.get_total_length_downloaded()),
+                                                  "Total Stall time": float(
+                                                      self.original.get_total_stall_time(5, 8000)),
+                                                  "Total Stall number": float(
+                                                      self.original.get_total_stall_count(5, 8000)),
+                                                  "Initial delay": float(self.original.get_initial_delay(5, 8000)),
+                                                  "Page load time in second for the total downloaded size":
+                                                      float(self.original.get_page_load_time_total()),
+                                                  "Page load time for the half of the downloaded size":
+                                                      float(self.original.get_page_load_time_half()),
+                                                  "Page load time for the quarter of the downloaded size": float(
+                                                      self.original.get_page_load_time_quarter()),
+                                                  "Page load time for the three quarters of the downloaded size": float(
+                                                      self.original.get_page_load_time_three_quarters())
+                                                  },
+                         self.target_filename: {"Number of packets": self.target.get_packets_count(),
+                                                "Download rate in kbit/s": float(
+                                                    self.target.get_download_rate_by_second()),
+                                                "Upload rate in kbit/s": float(self.target.get_upload_rate_by_second()),
+                                                "Length of all packets in kbit": float(self.target.get_total_length()),
+                                                "Total download length in kbit": float(
+                                                    self.target.get_total_length_downloaded()),
+                                                "Total Stall time": float(self.target.get_total_stall_time(5, 8000)),
+                                                "Total Stall number": float(self.target.get_total_stall_count(5, 8000)),
+                                                "Initial delay": float(self.target.get_initial_delay(5, 8000)),
+                                                "Page load time in second for the total downloaded size": float(
+                                                    self.target.get_page_load_time_total()),
+                                                "Page load time for the half of the downloaded size": float(
+                                                    self.target.get_page_load_time_half()),
+                                                "Page load time for the quarter of downloaded size": float(
+                                                    self.target.get_page_load_time_quarter()),
+                                                "Page load time for the three quarters of the downloaded size": float(
+                                                    self.target.get_page_load_time_three_quarters())
+                                                }
+                         }
+
+    def get_comparisons(self, raw=False):
+        if raw:
+            return self.comparisons
         return {f"{self.original_filename},{self.target_filename}": {"metrics": self.comparisons,
                                                                      "visualization_data": self.viz}}
 

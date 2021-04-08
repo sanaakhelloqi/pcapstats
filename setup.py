@@ -13,8 +13,7 @@ setup(
     url="https://github.com/sanaakhelloqi/pcapstats",
     entry_points={
         'console_scripts': [
-            'pcapstats-stats=cli.stats:stats',
-            'pcapstats-compare=cli.compare:compare'
+            "pcapstats = cli: cli"
             ],
     },
     python_requires='>=3.6',
@@ -25,6 +24,7 @@ setup(
         "pandas",
         "click",
         "jinja2",
+        "tqdm",
         "matplotlib",
         "dtaidistance",
         "importlib_resources ; python_version<'3.7'",
