@@ -137,8 +137,6 @@ class PacketCapture:
         else:
             self.stats["Deltas"]["median"] = float(np.median(self.deltas))
 
-    ####################################################################################
-
     def get_lengths_count(self):
         self.stats["Lengths"]["count"] = float(pd.Series(self.lengths).count())
 
@@ -172,8 +170,6 @@ class PacketCapture:
     def get_lengths_median(self):
         self.stats["Lengths"]["median"] = float(np.median(self.lengths))
 
-    ##############################################################################################
-
     def get_times_min(self):
         mlvideos.normalize_times_from_times(self.times)
         self.stats["Arrival times"]["min"] = float(pd.Series(self.times).min())
@@ -185,8 +181,6 @@ class PacketCapture:
     def get_times_median(self):
         mlvideos.normalize_times_from_times(self.times)
         self.stats["Arrival times"]["median"] = float(np.median(self.times))
-
-    ##########################################################################################
 
     def collect_stats(self):
         # deltas

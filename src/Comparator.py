@@ -39,7 +39,8 @@ class Comparator:
             "Dynamic_time_warping": {},
         }
 
-    def get_data_same_length(self, data_list_ori, data_list_aug):
+    @staticmethod
+    def get_data_same_length(data_list_ori, data_list_aug):
         n = len(data_list_ori)
         if n < 30:
             out, bins = pd.qcut(data_list_ori, n,
@@ -70,7 +71,7 @@ class Comparator:
             self.get_data_same_length(data_list_ori, data_list_aug)
         return bins, np.cumsum(histogram_original), np.cumsum(histogram_augmented), length_org, length_aug
 
-    def get_chi_squared_test(self):
+    def get_chi_squared_test_deltas(self):
         bins, histogram_original, histogram_augmented = self.get_data_chi_squared(self.original.get_deltas(),
                                                                                   self.target.get_deltas())
         self.comparisons["Chi_squared_test"]["Delta"] = stats.chisquare(histogram_original, histogram_augmented).pvalue
@@ -83,6 +84,8 @@ class Comparator:
                 "xaxis": "Deltas in second",
                 "yaxis": "Packet number"
             }
+
+    def get_chi_squared_test_lengths(self):
         bins_length, hist_original_length, hist_augmented_length = \
             self.get_data_chi_squared(self.original.get_lengths(), self.target.get_lengths())
 
@@ -98,6 +101,7 @@ class Comparator:
                 "yaxis": "Packet number"
             }
 
+    def get_chi_squared_test_packets_number(self):
         bins_packets_seconds, hist_packets_second, hist_augmented_packets_seconds = \
             self.get_data_chi_squared(list(self.original.get_packets_count_by_second().values()),
                                       list(self.target.get_packets_count_by_second().values()))
@@ -114,14 +118,9 @@ class Comparator:
                 "yaxis": "Packet number"
             }
 
-    def get_kolmogorov_smirnov_test(self):
+    def get_kolmogorov_smirnov_test_deltas(self):
         self.comparisons["Kolmogorov_smirnov_test"]["Delta"] = stats.ks_2samp(self.target.get_deltas(),
                                                                               self.original.get_deltas()).pvalue
-        self.comparisons["Kolmogorov_smirnov_test"]["Length"] = stats.ks_2samp(self.target.get_lengths(),
-                                                                               self.original.get_lengths()).pvalue
-        self.comparisons["Kolmogorov_smirnov_test"]['Packet number by second'] = \
-            stats.ks_2samp(list(self.target.get_packets_count_by_second().values()),
-                           list(self.original.get_packets_count_by_second().values())).pvalue
 
         bins, cumulative_original, cumulative_augmented, histmax, hist2max = self.get_cdf_data(
             self.original.get_deltas(),
@@ -136,6 +135,10 @@ class Comparator:
                 "yaxis": "Number of packets"
             }
 
+    def get_kolmogorov_smirnov_test_lengths(self):
+        self.comparisons["Kolmogorov_smirnov_test"]["Length"] = stats.ks_2samp(self.target.get_lengths(),
+                                                                               self.original.get_lengths()).pvalue
+
         bins_lengths, hist_lengths, hist2_lengths, histmax, hist2max = self.get_cdf_data(self.original.get_lengths(),
                                                                                          self.target.get_lengths())
         self.viz["CDF"]["Length"] = \
@@ -147,6 +150,10 @@ class Comparator:
                 "yaxis": "Number of packets"
             }
 
+    def get_kolmogorov_smirnov_test_packet_number(self):
+        self.comparisons["Kolmogorov_smirnov_test"]['Packet number by second'] = \
+            stats.ks_2samp(list(self.target.get_packets_count_by_second().values()),
+                           list(self.original.get_packets_count_by_second().values())).pvalue
         values_org = np.array(list(self.original.get_packets_count_by_second().values()))
         values_aug = np.array(list(self.target.get_packets_count_by_second().values()))
 
@@ -164,21 +171,25 @@ class Comparator:
                 "yaxis": "Packet number"
             }
 
-    def get_data_normalized(self, original_data, augmented_data):
+    @staticmethod
+    def get_data_normalized(original_data, augmented_data):
         max_org = max(original_data)
         min_org = min(original_data)
         max_aug = max(augmented_data)
         min_aug = min(augmented_data)
-        for i in range(len(original_data)):
+        augmented_data_len = len(augmented_data)
+        original_data_len = len(original_data)
+
+        for i in range(original_data_len):
             if max_org - min_org != 0:
                 original_data[i] = (original_data[i] - min_org) / (max_org - min_org)
             else:
-                original_data[i] = 1 / len(original_data)
-        for i in range(len(augmented_data)):
+                original_data[i] = 1 / original_data_len
+        for i in range(augmented_data_len):
             if max_aug - min_aug != 0:
                 augmented_data[i] = (augmented_data[i] - min_aug) / (max_aug - min_aug)
             else:
-                augmented_data[i] = 1 / len(augmented_data)
+                augmented_data[i] = 1 / augmented_data_len
         return original_data, augmented_data
 
     def get_earth_mover_distance_deltas(self):
@@ -225,8 +236,15 @@ class Comparator:
 
     def calculate_metrics(self):
         # self.get_graph_distance()
-        self.get_chi_squared_test()
-        self.get_kolmogorov_smirnov_test()
+        # self.get_chi_squared_test()
+        self.get_chi_squared_test_deltas()
+        self.get_chi_squared_test_lengths()
+        self.get_chi_squared_test_packets_number()
+
+        # self.get_kolmogorov_smirnov_test()
+        self.get_kolmogorov_smirnov_test_deltas()
+        self.get_kolmogorov_smirnov_test_lengths()
+        self.get_kolmogorov_smirnov_test_packet_number()
 
         self.get_earth_mover_distance_deltas()
         self.get_earth_mover_distance_lengths()
@@ -247,13 +265,13 @@ class Comparator:
                                                       self.original.get_upload_rate_by_second()),
                                                   "Length of all packets in kbit": float(
                                                       self.original.get_total_length()),
-                                                  "Total download length in kbit": float(
+                                                  "Total downloaded length in kbit": float(
                                                       self.original.get_total_length_downloaded()),
                                                   "Total Stall time": float(
-                                                      self.original.get_total_stall_time(5, 8000)),
+                                                      self.original.get_total_stall_time(30, 8000)),
                                                   "Total Stall number": float(
-                                                      self.original.get_total_stall_count(5, 8000)),
-                                                  "Initial delay": float(self.original.get_initial_delay(5, 8000)),
+                                                      self.original.get_total_stall_count(30, 8000)),
+                                                  "Initial delay": float(self.original.get_initial_delay(30, 8000)),
                                                   "Page load time in second for the total downloaded size":
                                                       float(self.original.get_page_load_time_total()),
                                                   "Page load time for the half of the downloaded size":
@@ -268,11 +286,11 @@ class Comparator:
                                                     self.target.get_download_rate_by_second()),
                                                 "Upload rate in kbit/s": float(self.target.get_upload_rate_by_second()),
                                                 "Length of all packets in kbit": float(self.target.get_total_length()),
-                                                "Total download length in kbit": float(
+                                                "Total downloaded length in kbit": float(
                                                     self.target.get_total_length_downloaded()),
-                                                "Total Stall time": float(self.target.get_total_stall_time(5, 8000)),
-                                                "Total Stall number": float(self.target.get_total_stall_count(5, 8000)),
-                                                "Initial delay": float(self.target.get_initial_delay(5, 8000)),
+                                                "Total Stall time": float(self.target.get_total_stall_time(30, 8000)),
+                                                "Total Stall number": float(self.target.get_total_stall_count(30, 8000)),
+                                                "Initial delay": float(self.target.get_initial_delay(30, 8000)),
                                                 "Page load time in second for the total downloaded size": float(
                                                     self.target.get_page_load_time_total()),
                                                 "Page load time for the half of the downloaded size": float(
