@@ -1,6 +1,6 @@
 {
   "Chi_squared_test": 0.05,
   "Kolmogorov_smirnov_test": 0.05,
-  "Earth_mover_distance": 0.024128045867176304,
-  "Dynamic_time_warping": 0.08452186446862886
+  "Earth_mover_distance": 0.3149166131774827,
+  "Dynamic_time_warping": 0.9666517028466955
 }

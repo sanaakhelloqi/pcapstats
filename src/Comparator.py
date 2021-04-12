@@ -272,13 +272,13 @@ class Comparator:
                                                   "Total Stall number": float(
                                                       self.original.get_total_stall_count(30, 8000)),
                                                   "Initial delay": float(self.original.get_initial_delay(30, 8000)),
-                                                  "Page load time in second for the total downloaded size":
+                                                  "Time needed in second for the total downloaded size":
                                                       float(self.original.get_page_load_time_total()),
-                                                  "Page load time for the half of the downloaded size":
+                                                  "Time needed for the half of the downloaded size":
                                                       float(self.original.get_page_load_time_half()),
-                                                  "Page load time for the quarter of the downloaded size": float(
+                                                  "Time needed for the quarter of the downloaded size": float(
                                                       self.original.get_page_load_time_quarter()),
-                                                  "Page load time for the three quarters of the downloaded size": float(
+                                                  "Time needed for the three quarters of the downloaded size": float(
                                                       self.original.get_page_load_time_three_quarters())
                                                   },
                          self.target_filename: {"Number of packets": self.target.get_packets_count(),
@@ -291,13 +291,13 @@ class Comparator:
                                                 "Total Stall time": float(self.target.get_total_stall_time(30, 8000)),
                                                 "Total Stall number": float(self.target.get_total_stall_count(30, 8000)),
                                                 "Initial delay": float(self.target.get_initial_delay(30, 8000)),
-                                                "Page load time in second for the total downloaded size": float(
+                                                "Time needed in second for the total downloaded size": float(
                                                     self.target.get_page_load_time_total()),
-                                                "Page load time for the half of the downloaded size": float(
+                                                "Time needed for the half of the downloaded size": float(
                                                     self.target.get_page_load_time_half()),
-                                                "Page load time for the quarter of downloaded size": float(
+                                                "Time needed for the quarter of downloaded size": float(
                                                     self.target.get_page_load_time_quarter()),
-                                                "Page load time for the three quarters of the downloaded size": float(
+                                                "Time needed for the three quarters of the downloaded size": float(
                                                     self.target.get_page_load_time_three_quarters())
                                                 }
                          }

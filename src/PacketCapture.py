@@ -47,7 +47,7 @@ class PacketCapture:
         return [pkt.length for pkt in self.packets]
 
     def get_total_length(self):
-        """returns the total length of packets in mbit
+        """returns the total length of packets in kbit
         """
         total_length = 0
         for pkt in self.packets:
@@ -436,21 +436,23 @@ class PacketCapture:
         play = False
         delta_t_list = []
         delta_t2_list = []
-        count = 0
+        second_counter = 0
         time_dr_dict = self.get_time_dr_dict()
         for time, download_rate in time_dr_dict.items():
-            count += 1
+            second_counter += 1  # 1 loop == 1 second
             buffer += download_rate / bitrate
             if dl and not play and buffer >= alpha:
                 buffer = max(buffer - 1, 0)
                 play = True
                 dl = True
-                delta_t_list.append(count + (alpha * bitrate / download_rate))
+                delta_t_list.append(second_counter + (alpha * bitrate / download_rate))
+                second_counter = 0
             # elif play == False and dl == True:
             elif buffer == 0 and dl and play:
                 play = False
                 dl = True
-                delta_t2_list.append(count + ((alpha * bitrate) / (bitrate - download_rate)))
+                delta_t2_list.append(second_counter + ((alpha * bitrate) / (bitrate - download_rate)))
+                second_counter = 0
 
             elif play and dl:
                 buffer = max(buffer - 1, 0)
