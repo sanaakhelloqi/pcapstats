@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="pcapstats",
-    version="1.0.1",
+    version="1.0.2",
     packages=find_packages(),
     license="Apache License 2.0",
     long_description=open("README.md").read(),
