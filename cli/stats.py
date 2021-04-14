@@ -25,3 +25,14 @@ def cli_stats(files, output, processes):
     with ProcessPoolExecutor(max_workers=processes) as executor:
         for _file, _stats, _features in list(tqdm.tqdm(executor.map(stats_worker, files), total=len(files))):
             stats_dict[Path(_file).name] = {"stats": _stats, "features": _features}
+
+    if stats_dict:
+        click.echo(f"Writing results to {output}")
+        with Path(output).open("w") as stats_out:
+            json.dump(stats_dict, stats_out)
+    else:
+        click.echo("No results generated.")
+
+
+if __name__ == "__main__":
+    cli_stats()
