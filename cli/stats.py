@@ -3,14 +3,15 @@ import src.utils as utils
 
 import json
 import click
-from scapy.error import Scapy_Exception
+
 from concurrent.futures import ProcessPoolExecutor
 import tqdm
 
 
 def stats_worker(_file):
     pcap = utils.read_file(_file)
-    return _file, pcap.get_stats()
+    pcap.calc_features()
+    return _file, pcap.get_stats(), pcap.get_features()
 
 
 @click.command("stats", help="Calculate statistics for one or more pcap files.")
@@ -22,16 +23,5 @@ def cli_stats(files, output, processes):
 
     click.echo("Analysing pcap files...")
     with ProcessPoolExecutor(max_workers=processes) as executor:
-        for _file, _stats in list(tqdm.tqdm(executor.map(stats_worker, files), total=len(files))):
-            stats_dict[Path(_file).name] = _stats
-
-    if stats_dict:
-        click.echo(f"Writing results to {output}")
-        with Path(output).open("w") as stats_out:
-            json.dump(stats_dict, stats_out)
-    else:
-        click.echo("No results generated.")
-
-
-if __name__ == "__main__":
-    cli_stats()
+        for _file, _stats, _features in list(tqdm.tqdm(executor.map(stats_worker, files), total=len(files))):
+            stats_dict[Path(_file).name] = {"stats": _stats, "features": _features}

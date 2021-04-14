@@ -555,6 +555,8 @@
 				if (graph_alert)
 					graph_alert.click();
 
+                _chartType = "stepLine"
+
 				let series = build_series(dicts["comparisons"][selected_file]["visualization_data"][selected_metric][selected_feature]);
 				let _xaxis = dicts["comparisons"][selected_file]["visualization_data"][selected_metric][selected_feature]["xaxis"];
 				let _yaxis = dicts["comparisons"][selected_file]["visualization_data"][selected_metric][selected_feature]["yaxis"];
@@ -565,26 +567,37 @@
 					exportEnabled: true,
 					backgroundColor: "#FFFFFF",
 					axisX: {
-						title: _xaxis
+						title: _xaxis,
+						crosshair: {
+                            enabled: true,
+                            snapToDataPoint: true
+                        }
 					},
 					axisY: {
 						title: _yaxis,
-						includeZero: true
+						includeZero: true,
+						crosshair: {
+                            enabled: true,
+                            snapToDataPoint: true
+                        }
 					},
 
 					data: [{
-						type: "line",
+						type: _chartType,
 						showInLegend: true,
 						name: "Original",
 						connectNullData: true,
+						lineDashType: "dash",
 						nullDataLineDashType: "solid",
-						dataPoints: series[0]
+						dataPoints: series[0],
+						markerType: "square"
 					},
 					{
-						type: "line",
+						type: _chartType,
 						showInLegend: true,
 						name: "Target",
 						connectNullData: true,
+						lineDashType: "dash",
 						nullDataLineDashType: "solid",
 						dataPoints: series[1]
 					}],

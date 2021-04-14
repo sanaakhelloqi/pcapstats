@@ -22,6 +22,8 @@ class PacketCapture:
                       "Lengths": {},
                       "Arrival times": {}}
 
+        self.features = {}
+
         self.graph_representation = None
         self.deltas = None
         self.times = self.get_times()
@@ -261,7 +263,7 @@ class PacketCapture:
         for _tuple in self.list_of_tuple_src_dst:
             set_of_all_ip_addr.add(_tuple[0])
             set_of_all_ip_addr.add(_tuple[1])
-        return set_of_all_ip_addr
+        return sorted(list(set_of_all_ip_addr))
 
     def get_list_of_partners(self):
         """returns a list of ip partners
@@ -376,6 +378,7 @@ class PacketCapture:
                     download_length += pkt.length
         download_length_kbit = self.byte_to_kbit(Decimal(download_length))
         mlvideos.normalize_times_from_times(self.times)
+
         return Decimal((download_length_kbit / self.times[-1]))
 
     def get_total_length_downloaded(self):
@@ -536,6 +539,34 @@ class PacketCapture:
                         break
         mlvideos.normalize_times_from_times(page_load_time)
         return page_load_time[-1]
+
+    def get_features(self) -> dict:
+        return self.features
+
+    def calc_features(self):
+        self.features = {"Number of packets": self.get_packets_count(),
+                         "Download rate in kbit/s": float(
+                             self.get_download_rate_by_second()),
+                         "Upload rate in kbit/s": float(
+                             self.get_upload_rate_by_second()),
+                         "Length of all packets in kbit": float(
+                             self.get_total_length()),
+                         "Total downloaded length in kbit": float(
+                             self.get_total_length_downloaded()),
+                         "Total Stall time": float(
+                             self.get_total_stall_time(30, 8000)),
+                         "Total Stall number": float(
+                             self.get_total_stall_count(30, 8000)),
+                         "Initial delay": float(self.get_initial_delay(30, 8000)),
+                         "Time needed in second for the total downloaded size":
+                             float(self.get_page_load_time_total()),
+                         "Time needed for the half of the downloaded size":
+                             float(self.get_page_load_time_half()),
+                         "Time needed for the quarter of the downloaded size": float(
+                             self.get_page_load_time_quarter()),
+                         "Time needed for the three quarters of the downloaded size": float(
+                             self.get_page_load_time_three_quarters())
+                         }
 
     @staticmethod
     def byte_to_kbit(_byte: Union[int, Decimal]) -> Decimal:

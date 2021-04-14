@@ -81,8 +81,8 @@ class Comparator:
                 "x": list(bins[:-1]),
                 "y1": [float(x) for x in list(histogram_original)],
                 "y2": [float(x) for x in list(histogram_augmented)],
-                "xaxis": "Deltas in second",
-                "yaxis": "Packet number"
+                "xaxis": "IATs [s]",
+                "yaxis": "Number of Packets %"
             }
 
     def get_chi_squared_test_lengths(self):
@@ -97,8 +97,8 @@ class Comparator:
                 "x": list(bins_length[:-1]),
                 "y1": [float(x) for x in list(hist_original_length)],
                 "y2": [float(x) for x in list(hist_augmented_length)],
-                "xaxis": "Lengths in bytes",
-                "yaxis": "Packet number"
+                "xaxis": "Lengths [byte]",
+                "yaxis": "Number of Packets %"
             }
 
     def get_chi_squared_test_packets_number(self):
@@ -114,8 +114,8 @@ class Comparator:
                 "x": list(self.original.get_packets_count_by_second().keys()),
                 "y1": [float(x) for x in list(self.original.get_packets_count_by_second().values())],
                 "y2": [float(x) for x in list(self.target.get_packets_count_by_second().values())],
-                "xaxis": "Time in seconds",
-                "yaxis": "Packet number"
+                "xaxis": "Time [s]",
+                "yaxis": "Number of Packets %"
             }
 
     def get_kolmogorov_smirnov_test_deltas(self):
@@ -131,8 +131,8 @@ class Comparator:
                 "x": list(bins[:-1]),
                 "y1": [float(x / histmax if int(histmax) != 0 else x) for x in list(cumulative_original)],
                 "y2": [float(x / hist2max if int(hist2max) != 0 else x) for x in list(cumulative_augmented)],
-                "xaxis": "Deltas in second",
-                "yaxis": "Number of packets"
+                "xaxis": "IATs [s]",
+                "yaxis": "Number of Packets %"
             }
 
     def get_kolmogorov_smirnov_test_lengths(self):
@@ -146,8 +146,8 @@ class Comparator:
                 "x": list(bins_lengths[:-1]),
                 "y1": [float(x / histmax if int(histmax) != 0 else x) for x in list(hist_lengths)],
                 "y2": [float(x / hist2max if int(hist2max) != 0 else x) for x in list(hist2_lengths)],
-                "xaxis": "Lengths in bytes",
-                "yaxis": "Number of packets"
+                "xaxis": "Lengths [byte]",
+                "yaxis": "Number of Packets %"
             }
 
     def get_kolmogorov_smirnov_test_packet_number(self):
@@ -167,8 +167,8 @@ class Comparator:
                        npcumsum_org],
                 "y2": [float(x / npcumsum_aug[-1] if int(npcumsum_aug[-1]) != 0 else 0) for x in
                        npcumsum_aug],
-                "xaxis": "Time in second",
-                "yaxis": "Packet number"
+                "xaxis": "Time [s]",
+                "yaxis": "Number of Packets %"
             }
 
     @staticmethod
@@ -235,13 +235,10 @@ class Comparator:
             dtw.distance(original_packets_number, augmented_packets_number)
 
     def calculate_metrics(self):
-        # self.get_graph_distance()
-        # self.get_chi_squared_test()
         self.get_chi_squared_test_deltas()
         self.get_chi_squared_test_lengths()
         self.get_chi_squared_test_packets_number()
 
-        # self.get_kolmogorov_smirnov_test()
         self.get_kolmogorov_smirnov_test_deltas()
         self.get_kolmogorov_smirnov_test_lengths()
         self.get_kolmogorov_smirnov_test_packet_number()
@@ -258,49 +255,13 @@ class Comparator:
         return self.features
 
     def calc_features(self):
-        self.features = {self.original_filename: {"Number of packets": self.original.get_packets_count(),
-                                                  "Download rate in kbit/s": float(
-                                                      self.original.get_download_rate_by_second()),
-                                                  "Upload rate in kbit/s": float(
-                                                      self.original.get_upload_rate_by_second()),
-                                                  "Length of all packets in kbit": float(
-                                                      self.original.get_total_length()),
-                                                  "Total downloaded length in kbit": float(
-                                                      self.original.get_total_length_downloaded()),
-                                                  "Total Stall time": float(
-                                                      self.original.get_total_stall_time(30, 8000)),
-                                                  "Total Stall number": float(
-                                                      self.original.get_total_stall_count(30, 8000)),
-                                                  "Initial delay": float(self.original.get_initial_delay(30, 8000)),
-                                                  "Time needed in second for the total downloaded size":
-                                                      float(self.original.get_page_load_time_total()),
-                                                  "Time needed for the half of the downloaded size":
-                                                      float(self.original.get_page_load_time_half()),
-                                                  "Time needed for the quarter of the downloaded size": float(
-                                                      self.original.get_page_load_time_quarter()),
-                                                  "Time needed for the three quarters of the downloaded size": float(
-                                                      self.original.get_page_load_time_three_quarters())
-                                                  },
-                         self.target_filename: {"Number of packets": self.target.get_packets_count(),
-                                                "Download rate in kbit/s": float(
-                                                    self.target.get_download_rate_by_second()),
-                                                "Upload rate in kbit/s": float(self.target.get_upload_rate_by_second()),
-                                                "Length of all packets in kbit": float(self.target.get_total_length()),
-                                                "Total downloaded length in kbit": float(
-                                                    self.target.get_total_length_downloaded()),
-                                                "Total Stall time": float(self.target.get_total_stall_time(30, 8000)),
-                                                "Total Stall number": float(self.target.get_total_stall_count(30, 8000)),
-                                                "Initial delay": float(self.target.get_initial_delay(30, 8000)),
-                                                "Time needed in second for the total downloaded size": float(
-                                                    self.target.get_page_load_time_total()),
-                                                "Time needed for the half of the downloaded size": float(
-                                                    self.target.get_page_load_time_half()),
-                                                "Time needed for the quarter of downloaded size": float(
-                                                    self.target.get_page_load_time_quarter()),
-                                                "Time needed for the three quarters of the downloaded size": float(
-                                                    self.target.get_page_load_time_three_quarters())
-                                                }
-                         }
+        self.original.calc_features()
+        self.target.calc_features()
+
+        self.features = {
+            self.original_filename: self.original.get_features(),
+            self.target_filename: self.target.get_features()
+        }
 
     def get_comparisons(self, raw=False):
         if raw:
